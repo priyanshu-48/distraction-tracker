@@ -1,0 +1,6 @@
+CSS HEX 
+--penn-blue: #17255aff;
+--medium-slate-blue: #8b5cf6ff;
+--bright-pink-crayola: #f45b69ff;
+--floral-white: #fffaf0ff;
+--eerie-black: #1b1b1bff;
