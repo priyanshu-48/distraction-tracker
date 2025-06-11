@@ -1,13 +1,14 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
+import { Link } from "react-router-dom";
 
 function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
 
   const links = [
-    { name: "Dashboard", href: "#" },
-    { name: "Analytics", href: "#" },
-    { name: "Settings", href: "#" },
+    { name: "Dashboard", to: "/" },
+    { name: "Analytics", to: "/analytics" },
+    { name: "Settings", to: "/settings" }, // changed from "#" to real route
   ];
 
   return (
@@ -19,13 +20,13 @@ function Sidebar() {
       >
         <nav className="space-y-4">
           {links.map((link) => (
-            <a
+            <Link
               key={link.name}
-              href={link.href}
+              to={link.to}
               className="block hover:bg-dark-grey rounded px-2 py-1"
             >
               {link.name}
-            </a>
+            </Link>
           ))}
         </nav>
       </div>
@@ -34,3 +35,4 @@ function Sidebar() {
 }
 
 export default Sidebar;
+
