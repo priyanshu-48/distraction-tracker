@@ -1,39 +1,57 @@
 let activeTabId = null;
+let lastTab = null;
 
-function extractHostname(url) {
-  try {
-    const { hostname } = new URL(url);
-    let cleanHost = hostname.replace("www.", ""); // optional: remove 'www.'
-    cleanHost = cleanHost.replace(".com","");
-    return cleanHost.charAt(0).toUpperCase() + cleanHost.slice(1);
-  } catch (e) {
-    return "unknown";
-  }
-}
-
-chrome.tabs.onActivated.addListener((activeInfo) => {
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
   activeTabId = activeInfo.tabId;
 });
 
-// Triggered when a tab updates (like finishes loading)
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  // Only act on the current active tab and once it's fully loaded
+async function sendStartData(tab){
+  try{
+      const startData = {
+        url: tab.url,
+        domain: new URL(tab.url).hostname,
+        title: tab.title,
+        startTime: new Date().toISOString()
+      };
+      await axios.post("http://localhost:3000/api/start-tab", startData);
+
+      lastTab = {
+        url : tab.url,
+        id : tab.id
+      };
+    }catch (error) {
+      console.error("Failed to send tab data:", error);
+  }
+}
+
+async function sendEndData(){
+  try{
+    const endData = {
+      url: lastTab.url,
+        endedAt: new Date().toISOString()
+    };
+    await axios.post("http://localhost:3000/api/end-tab",endData);
+  }catch(err){
+    console.error("Failed to end tab on close:",error);
+  }
+};
+
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
   if (tabId === activeTabId && changeInfo.status === "complete") {
-    const timestamp = new Date().toISOString();
-    const websiteName = extractHostname(tab.url);
-
     if (tab.url && tab.url.startsWith("http")) {
-      console.log(`✅ Tab activated at ${timestamp}`);
-      console.log("Tab Title:", websiteName);
-      console.log("Tab URL:", tab.url);
+      await sendStartData(tab);
+      activeTabId = null;
+    }
+  }
+});
 
-      chrome.tabs.sendMessage(tabId, {
-        type: "NEW",
-        website: websiteName,
-        switchTime: timestamp,
-      });
-
-      activeTabId = null; // reset after handling
+chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
+  if (lastTab && lastTab.id === tabId) {
+    try {
+      await sendEndData();
+      lastTab = null;
+    } catch (error) {
+      console.error("Failed to end tab on close:", error);
     }
   }
 });
