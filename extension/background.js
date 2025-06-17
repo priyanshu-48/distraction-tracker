@@ -13,14 +13,24 @@ async function sendStartData(tab){
         title: tab.title,
         startTime: new Date().toISOString()
       };
-      await axios.post("http://localhost:3000/api/start-tab", startData);
+      const response = await fetch("http://localhost:3000/api/start-tab",{
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(startData)
+      });
+      if(!response.ok){
+        const errorText = await response.text();
+        throw new Error(`HTTP error! ${response.status}: ${errorText}`);
+      }
 
       lastTab = {
         url : tab.url,
         id : tab.id
       };
-    }catch (error) {
-      console.error("Failed to send tab data:", error);
+    }catch (err) {
+      console.error("Failed to send tab data:", err);
   }
 }
 
@@ -30,10 +40,19 @@ async function sendEndData(){
       url: lastTab.url,
         endedAt: new Date().toISOString()
     };
-    await axios.post("http://localhost:3000/api/end-tab",endData);
-  }catch(err){
-    console.error("Failed to end tab on close:",error);
-  }
+    const response = await fetch("http://localhost:3000/api/end-tab",{
+      method : "POST",
+      headers : {
+        "Content-Type": "application/json"
+      },
+      body : JSON.stringify(endData)
+    });
+    if(!response.ok){
+        const errorText = await response.text();
+        throw new Error(`HTTP error! ${response.status}: ${errorText}`);
+    }}catch(err){
+      console.error("Failed to end tab on close:",err);
+    }
 };
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
