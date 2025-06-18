@@ -4,6 +4,7 @@ import bodyParser from "body-parser";
 import tabRoute from "./routes/tabRoute.js";
 import trackingRoute from "./routes/trackingRoute.js";
 import registerRoute from "./routes/registerRoute.js";
+import loginRoute from "./routes/loginRoute.js";
 
 const app = express();
 const PORT = 3000;
@@ -14,4 +15,5 @@ app.use(bodyParser.json());
 app.use("/api", tabRoute);
 app.use("/api",trackingRoute);
 app.use("/api",registerRoute);
+app.use("/api",loginRoute);
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
