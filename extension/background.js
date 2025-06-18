@@ -55,7 +55,11 @@ async function sendEndData(){
     }
 };
 
+let isExtensionTracking = false;
+
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+  if (!isExtensionTracking) return;
+
   if (tabId === activeTabId && changeInfo.status === "complete") {
     if (tab.url && tab.url.startsWith("http")) {
       await sendStartData(tab);
@@ -65,6 +69,8 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
 });
 
 chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
+  if (!isExtensionTracking) return;
+
   if (lastTab && lastTab.id === tabId) {
     try {
       await sendEndData();
@@ -74,3 +80,21 @@ chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
     }
   }
 });
+
+async function checkTrackingStatus() {
+  try {
+    const res = await fetch('http://localhost:3000/api/is-tracking');
+    const data = await res.json();
+
+    isExtensionTracking = data.isTracking;
+    console.log(`Tracking status: ${isExtensionTracking}`);
+  } catch (err) {
+    console.error('Failed to fetch tracking status:', err);
+  }
+}
+
+setInterval(checkTrackingStatus, 10000); 
+
+
+
+
