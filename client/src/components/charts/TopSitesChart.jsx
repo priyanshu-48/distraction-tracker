@@ -10,11 +10,11 @@ const data = [
 export default function TopSitesChart() {
   return (
     <ResponsiveContainer width="100%" height={200}>
-      <BarChart layout="vertical" data={data}>
-        <XAxis type="number" hide />
-        <YAxis dataKey="site" type="category" />
+      <BarChart layout="horizontal" data={data}>
+        <XAxis dataKey="site" type="category"/>
+        <YAxis type="number" hide />
         <Tooltip />
-        <Bar dataKey="minutes" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
+        <Bar dataKey="minutes" fill="#8b5cf6" barSize={20}/>
       </BarChart>
     </ResponsiveContainer>
   );
