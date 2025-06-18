@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from 'axios';
 import Button from "../components/homepage/button";
 import StatBlock from "../components/homepage/statBlock";
 import {BarChart,Bar,XAxis,YAxis,Tooltip,ResponsiveContainer,} from "recharts";
@@ -7,9 +8,27 @@ import Card from "../components/homepage/card";
 import { Play, Pause } from "lucide-react";
 
 export default function HomePage() {
-  const [tracking, setTracking] = useState(false);
+  const [isTracking, setTracking] = useState(false);
 
-  const toggleTracking = () => setTracking((prev) => !prev);
+  useEffect(() => {
+    axios.get('/api/is-tracking')
+      .then(res => setTracking(res.data.isTracking))
+      .catch(err => console.error('Failed to fetch tracking state', err));
+  }, []);
+
+  const toggleTracking = async () => {
+    console.log("Button clicked. isTracking was:", isTracking);
+    try {
+      if (isTracking) {
+        await axios.post('/api/stop-tracking');
+      } else {
+        await axios.post('/api/start-tracking');
+      }
+      setTracking(!isTracking);
+    } catch (err) {
+      console.error('Error toggling tracking:', err);
+    }
+  };
 
   const analytics = {
     mostVisitedSites: [
@@ -38,15 +57,11 @@ export default function HomePage() {
         <div className="justify-self-center p-6 ">
           <Button
             onClick={toggleTracking}
-            variant={tracking ? "destructive" : "default"}
+            variant={isTracking ? "destructive" : "default"}
             className="text-2xl gap-3"
           >
-            {tracking ? (
-              <Pause className="w-6 h-6" />
-            ) : (
-              <Play className="w-6 h-6" />
-            )}
-            {tracking ? "Stop" : "Start"} Session
+            {isTracking ? <Pause className="w-6 h-6" /> : <Play className="w-6 h-6" />}
+            {isTracking ? "Stop" : "Start"} Session
           </Button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 px-10 mt-12">
