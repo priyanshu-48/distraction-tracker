@@ -4,6 +4,7 @@ import bodyParser from "body-parser";
 import tabRoute from "./routes/tabRoute.js";
 import trackingRoute from "./routes/trackingRoute.js";
 import authRoutes from "./routes/authRoute.js";
+import siteAddRoute from './routes/siteAddRoute.js';
 
 
 const app = express();
@@ -15,4 +16,5 @@ app.use(bodyParser.json());
 app.use("/api",tabRoute);
 app.use("/api",trackingRoute);
 app.use("/api/auth",authRoutes);
+app.use("/api",siteAddRoute);
 app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
