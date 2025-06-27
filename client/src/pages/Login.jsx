@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api';
 
 function Login() {
     const navigate = useNavigate();
@@ -17,18 +17,32 @@ function Login() {
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
-            const res = await axios.post('http://localhost:3000/api/auth/login', {
+            const res = await api.post('/auth/login', {
                 email,
                 password
             });
 
-            localStorage.setItem('token', res.data.token);
+            const token = res.data.token;
+
+            localStorage.setItem('token', token);
+
+            const EXTENSION_ID = "ifngbandokfmgeaegldacociolmodpmp"; 
+            chrome.runtime.sendMessage(
+                EXTENSION_ID,
+                { type: "SET_TOKEN", token },
+                (response) => {
+                    console.log("Extension response:", response);
+                }
+            );
+
             navigate("/dashboard");
+
         } catch (err) {
             const msg = err.response?.data?.error || "Login failed";
             alert(msg);
         }
     };
+
 
     return (
         <div className="flex min-h-screen items-center justify-center bg-gray-100 px-4">

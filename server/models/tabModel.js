@@ -1,17 +1,15 @@
 import db from "../db.js";
 
 export async function insertStartData(data) {
-  const { url, domain, title, startTime } = data;
+  const { url, domain, title, startTime, userId } = data;
   await db.query(
-    "INSERT INTO tab_activity (url, domain, title, started_at) VALUES ($1, $2, $3, $4)",
-    [url, domain, title, startTime]
+    "INSERT INTO tab_activity (url, domain, title, started_at, user_id) VALUES ($1, $2, $3, $4, $5)",
+    [url, domain, title, startTime, userId] 
   );
 }
 
 export async function updateEndTime(data) {
   const { url, endedAt } = data;
-  console.log("End url:",url);
-  console.log("End time:",endedAt);
   await db.query(`
   WITH target AS (
     SELECT id FROM tab_activity
