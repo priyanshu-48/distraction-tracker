@@ -1,33 +1,52 @@
 import { useState } from "react";
 import { Menu, X } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 function Sidebar() {
   const [isOpen, setIsOpen] = useState(false);
+  const location = useLocation();
 
   const links = [
     { name: "Dashboard", to: "/" },
     { name: "Analytics", to: "/analytics" },
-    { name: "Settings", to: "/settings" }, // changed from "#" to real route
+    { name: "Settings", to: "/settings" },
   ];
 
   return (
-    <div className="md:flex">
+    <div className="relative">
+      {/* Mobile toggle button */}
+      <button
+        className="md:hidden p-3 focus:outline-none text-stone-700"
+        onClick={() => setIsOpen(!isOpen)}
+      >
+        {isOpen ? <X size={24} /> : <Menu size={24} />}
+      </button>
+
+      {/* Sidebar */}
       <div
         className={`${
           isOpen ? "block" : "hidden"
-        } md:block w-64 bg-grey text-navy-blue h-screen p-6`}
+        } md:block fixed md:static top-0 left-0 z-30 w-64 h-full bg-white shadow-md p-6 transition-transform`}
       >
-        <nav className="space-y-4">
-          {links.map((link) => (
-            <Link
-              key={link.name}
-              to={link.to}
-              className="block hover:bg-dark-grey rounded px-2 py-1"
-            >
-              {link.name}
-            </Link>
-          ))}
+        <nav className="space-y-2">
+          <h2 className="text-lg font-semibold mb-4 text-stone-700">Menu</h2>
+          {links.map((link) => {
+            const isActive = location.pathname === link.to;
+            return (
+              <Link
+                key={link.name}
+                to={link.to}
+                className={`block px-4 py-2 rounded-md transition-colors ${
+                  isActive
+                    ? "bg-violet-100 text-violet-600 font-medium"
+                    : "text-stone-600 hover:bg-stone-100 hover:text-stone-900"
+                }`}
+                onClick={() => setIsOpen(false)} // close sidebar on mobile
+              >
+                {link.name}
+              </Link>
+            );
+          })}
         </nav>
       </div>
     </div>
@@ -35,4 +54,5 @@ function Sidebar() {
 }
 
 export default Sidebar;
+
 

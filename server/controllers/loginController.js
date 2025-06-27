@@ -13,6 +13,6 @@ export async function loginController(req, res) {
       token   
     });
   } catch (err) {
-    res.status(500).send("Login Failed");
+    return res.status(401).json({ error: err.message });
   }
 };
