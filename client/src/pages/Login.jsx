@@ -6,6 +6,7 @@ function Login() {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const EXTENSION_ID = "ifngbandokfmgeaegldacociolmodpmp";
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -13,6 +14,25 @@ function Login() {
             navigate("/dashboard");
         }
     }, [navigate]);
+
+    async function sendTokenToExtension(token) {
+        return new Promise((resolve, reject) => {
+            if (!window.chrome?.runtime?.sendMessage) {
+                return reject(new Error("Extension not available."));
+            }
+
+            chrome.runtime.sendMessage(
+                EXTENSION_ID,
+                { type: "SET_TOKEN", token },
+                (response) => {
+                    if (chrome.runtime.lastError || !response) {
+                        return reject(new Error("Extension is not responding."));
+                    }
+                    resolve(response);
+                }
+            );
+        });
+    }
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -23,23 +43,11 @@ function Login() {
             });
 
             const token = res.data.token;
-
             localStorage.setItem('token', token);
-
-            const EXTENSION_ID = "ifngbandokfmgeaegldacociolmodpmp"; 
-            chrome.runtime.sendMessage(
-                EXTENSION_ID,
-                { type: "SET_TOKEN", token },
-                (response) => {
-                    console.log("Extension response:", response);
-                }
-            );
-
+            await sendTokenToExtension(token);
             navigate("/dashboard");
-
         } catch (err) {
-            const msg = err.response?.data?.error || "Login failed";
-            alert(msg);
+            alert(err.message || "Login failed");
         }
     };
 
