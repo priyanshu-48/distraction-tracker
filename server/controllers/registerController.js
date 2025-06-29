@@ -10,7 +10,7 @@ export async function register(req, res) {
         await registerUser(req.body);
         res.status(201).send("Registration Successful");
     } catch (err) {
-        if (err.code === '23505') { // PostgreSQL unique_violation
+        if (err.code === '23505') { //db violation if already registered 
             return res.status(409).send("Email already registered");
         }else{
             res.status(500).send("Registration Failed");

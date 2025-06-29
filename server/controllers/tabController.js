@@ -11,7 +11,7 @@ export async function startTab(req, res) {
     const userId = decoded.id || decoded.userId;
     
     const tabData = {
-      ...req.body,
+      ...req.body, 
       userId 
     };
 
