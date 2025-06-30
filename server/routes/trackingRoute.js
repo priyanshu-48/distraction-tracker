@@ -6,6 +6,6 @@ const router = express.Router();
 
 router.post("/start-tracking",authenticate,startTracking);
 router.post("/stop-tracking",authenticate,stopTracking);
-router.get("/is-tracking",authenticate,is_Tracking);
+router.get("/is-tracking",is_Tracking);
 
 export default router;

@@ -12,8 +12,8 @@ export function useTracking() {
 
   const toggleTracking = async () => {
     try {
-      if (isTracking) await axios.post("/api/stop-tracking");
-      else await axios.post("/api/start-tracking");
+      if (isTracking) await axios.post("/api/stop-tracking", { time: new Date().toISOString() });
+      else await axios.post("/api/start-tracking", { time: now });
       setTracking(!isTracking);
     } catch (err) {
       console.error("Error toggling tracking:", err);

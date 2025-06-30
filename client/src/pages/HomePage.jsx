@@ -2,9 +2,11 @@ import { Play, Pause } from "lucide-react";
 import Button from "../components/homepage/button";
 import StatBlock from "../components/homepage/statBlock";
 import { useTracking } from "../hooks/useTracking";
-import Card from '../components/homepage/card';
+import ChartCard from "../components/ChartCard";
 import TopVisitedToday from "../components/charts/TopVisitedSitesToday";
 import TimeSpentToday from "../components/charts/TimeSpentToday";
+import TimeSpentDaily from "../components/charts/TimeSpentDaily";
+import TabSwitchesDaily from "../components/charts/TabSwitchesDaily";
 
 export default function HomePage() {
   const { isTracking, toggleTracking } = useTracking();
@@ -16,12 +18,12 @@ export default function HomePage() {
           <h1 className="text-4xl font-bold">Distraction Tracker</h1>
         </div>
 
-        <div className="bg-white rounded-2xl m-10 grid grid-cols-2 md:grid-cols-4 gap-x-10 gap-y-4 px-6 py-4">
+        {/* <div className="bg-white rounded-2xl m-10 grid grid-cols-2 md:grid-cols-4 gap-x-10 gap-y-4 px-6 py-4">
           <StatBlock title="Focus Session Time" value="3h 20m" growth={5.2} />
           <StatBlock title="Time Distracted" value="1h 10m" growth={-3.1} />
           <StatBlock title="Focus Sessions" value="5" />
           <StatBlock title="Total Focused" value="4h 30m" />
-        </div>
+        </div> */}
 
         <div className="justify-self-center p-6">
           <Button
@@ -33,9 +35,11 @@ export default function HomePage() {
             {isTracking ? "Stop" : "Start"} Session
           </Button>
         </div>
-        <div className="grid grid-cols-2 gap-4 m-10"> 
-            <Card title='Most Visited Sites'><TopVisitedToday/></Card>
-            <Card title='Most Time Spent'><TimeSpentToday /></Card>
+        <div className="grid grid-cols-2 grid-rows-2 gap-4 m-10"> 
+            <ChartCard title='Most Visited Sites'><TopVisitedToday/></ChartCard>
+            <ChartCard title='Most Time Spent'><TimeSpentToday /></ChartCard>
+            <ChartCard title="Daily Tab Switches"><TabSwitchesDaily /></ChartCard>
+            <ChartCard title="Daily Time Spent"><TimeSpentDaily /></ChartCard>
         </div>
       </div>
     </div>

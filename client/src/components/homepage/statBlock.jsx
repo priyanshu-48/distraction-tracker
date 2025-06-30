@@ -1,6 +1,10 @@
-// import React from 'react';
+import { useState,useEffect } from "react";
 
-export default function StatBlock({ title, value, growth = null }) {
+export default function StatBlock({ title, growth = null }) {
+  const [data,setData] = useState([]);
+  useEffect(() => {
+    
+  })
   return (
     <div className="flex flex-col">
       <p className="text-sm text-gray-500">{title}</p>
