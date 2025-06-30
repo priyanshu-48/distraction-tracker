@@ -17,7 +17,7 @@ export default function TimeSpentDaily(){
     return(
         <>
             <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={data} margin={{ top: 20, right: 40, left: 0, bottom: 20 }}>
+                <BarChart data={data} margin={{ top: 20, right: 40, left: 0, bottom: 20 }} barCategoryGap='30%' >
                     <CartesianGrid />
                     <XAxis dataKey="weekday"/>
                     <YAxis dataKey="time_spent" />

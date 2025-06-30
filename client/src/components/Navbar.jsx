@@ -18,18 +18,6 @@ const Navbar = () => {
         Distraction Tracker
       </div>
 
-      <div className="flex space-x-10">
-        <a href="/dashboard" className="text-white hover:underline">
-          Dashboard
-        </a>
-        <a href="/history" className="text-white hover:underline">
-          History
-        </a>
-        <a href="/trends" className="text-white hover:underline">
-          Trends
-        </a>
-      </div>
-
       <div className="flex space-x-8 items-center">
         <div className="hidden lg:flex justify-center space-x-12 items-center border rounded-md border-white bg-white">
           <button
