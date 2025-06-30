@@ -8,7 +8,7 @@ function Sidebar() {
 
   const links = [
     { name: "Dashboard", to: "/" },
-    { name: "Analytics", to: "/analytics" },
+    { name: "Analytics", to: "/dashboard/analytics" },
     { name: "Settings", to: "/settings" },
   ];
 
@@ -26,10 +26,9 @@ function Sidebar() {
       <div
         className={`${
           isOpen ? "block" : "hidden"
-        } md:block fixed md:static top-0 left-0 z-30 w-64 h-full bg-white shadow-md p-6 transition-transform`}
+        } md:block fixed md:static top-0 left-0 z-30 w-64 h-full bg-white shadow-md py-10 px-6 transition-transform`}
       >
         <nav className="space-y-2">
-          <h2 className="text-lg font-semibold mb-4 text-stone-700">Menu</h2>
           {links.map((link) => {
             const isActive = location.pathname === link.to;
             return (

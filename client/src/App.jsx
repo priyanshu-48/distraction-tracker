@@ -1,7 +1,7 @@
 import './App.css'
 import {Routes,Route} from "react-router-dom";
 import Dashboard from './layout/Dashboard';
-import Analytics from './pages/analytics';
+import Analytics from "./pages/AnalyticsPage";
 import HomePage from './pages/HomePage';
 import Login from './pages/Login';
 import Register from './pages/Register';
