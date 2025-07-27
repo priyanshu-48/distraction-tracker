@@ -1,14 +1,8 @@
-import jwt from "jsonwebtoken";
 import { insertStartData, updateEndTime } from "../models/tabModel.js";
 
 export async function startTab(req, res) {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).send("No token provided");
-
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.id || decoded.userId;
+    const userId = req.user.id;
     
     const tabData = {
       ...req.body, 
@@ -16,21 +10,16 @@ export async function startTab(req, res) {
     };
 
     await insertStartData(tabData);
-    res.status(200).send("Start logged");
+    res.status(200).json({ success: true, message: "Start logged" });
   } catch (err) {
     console.error("startTab error:", err);
-    res.status(500).send("Failed to log start");
+    res.status(500).json({ error: "Failed to log start" });
   }
 }
 
 export async function endTab(req, res) {
   try {
-    const authHeader = req.headers.authorization;
-    if (!authHeader) return res.status(401).send("No token provided");
-
-    const token = authHeader.split(" ")[1];
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.id || decoded.userId;
+    const userId = req.user.id;
 
     const tabData = {
       ...req.body,
@@ -38,10 +27,10 @@ export async function endTab(req, res) {
     };
 
     await updateEndTime(tabData);
-    res.status(200).send("End logged");
+    res.status(200).json({ success: true, message: "End logged" });
   } catch (err) {
     console.error("endTab error:", err);
-    res.status(500).send("Failed to log end");
+    res.status(500).json({ error: "Failed to log end" });
   }
 }
 

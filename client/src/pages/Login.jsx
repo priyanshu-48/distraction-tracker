@@ -6,7 +6,7 @@ function Login() {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const EXTENSION_ID = "ifngbandokfmgeaegldacociolmodpmp";
+    const EXTENSION_ID = process.env.REACT_APP_EXTENSION_ID;
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -21,12 +21,18 @@ function Login() {
                 return reject(new Error("Extension not available."));
             }
 
+            if (!EXTENSION_ID) {
+                console.warn("Extension ID not configured - skipping extension communication");
+                return resolve();
+            }
+
             chrome.runtime.sendMessage(
                 EXTENSION_ID,
                 { type: "SET_TOKEN", token },
                 (response) => {
                     if (chrome.runtime.lastError || !response) {
-                        return reject(new Error("Extension is not responding."));
+                        console.warn("Extension communication failed:", chrome.runtime.lastError);
+                        return resolve();
                     }
                     resolve(response);
                 }
