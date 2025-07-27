@@ -16,7 +16,7 @@ function Sidebar() {
     <div className="relative">
       {/* Mobile toggle button */}
       <button
-        className="md:hidden p-3 focus:outline-none text-stone-700"
+        className="max-md:hidden p-3 focus:outline-none text-stone-700"
         onClick={() => setIsOpen(!isOpen)}
       >
         {isOpen ? <X size={24} /> : <Menu size={24} />}
@@ -26,7 +26,7 @@ function Sidebar() {
       <div
         className={`${
           isOpen ? "block" : "hidden"
-        } md:block fixed md:static top-0 left-0 z-30 w-64 h-full bg-white shadow-md py-10 px-6 transition-transform`}
+        } block max-md:hidden fixed block max-md:static top-0 left-0 z-30 w-64 h-full bg-white shadow-md py-10 px-6 transition-transform`}
       >
         <nav className="space-y-2">
           {links.map((link) => {

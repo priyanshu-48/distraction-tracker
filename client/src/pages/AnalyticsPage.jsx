@@ -15,7 +15,7 @@ export default function Analytics() {
     {/* Today Section */}
     <section>
       <h2 className="text-2xl font-semibold text-gray-700 mb-4">Today</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 max-md:grid-cols-1 gap-6">
         <ChartCard title="Most Visited Sites">
           <TopSitesChart />
         </ChartCard>
@@ -28,7 +28,7 @@ export default function Analytics() {
     {/* This Week Section */}
     <section>
       <h2 className="text-2xl font-semibold text-gray-700 mb-4">This Week</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-2 max-md:grid-cols-1 gap-6">
         <ChartCard title="Daily Tab Switches">
           <TabSwitchesDaily />
         </ChartCard>

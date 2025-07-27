@@ -44,7 +44,7 @@ export default function StatBlock() {
 
 
   return (
-    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 m-6">
+    <div className="grid grid-cols-4 max-md:grid-cols-2 gap-6 m-6">
       <StatCard title="Distractions" value={stats.distractions} />
       <StatCard title="Most Visited Website" value={stats.mostVisited} />
       <StatCard title="Distraction Time" value={formatTime(stats.distractionTime)} />

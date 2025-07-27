@@ -11,7 +11,6 @@ export async function siteAddController(req, res) {
         });
     }
     
-    // Basic domain validation
     if (typeof domain !== 'string' || domain.trim().length === 0) {
         return res.status(400).json({ 
             error: "Validation failed",
@@ -19,7 +18,6 @@ export async function siteAddController(req, res) {
         });
     }
     
-    // Basic domain format validation
     const domainRegex = /^[a-zA-Z0-9][a-zA-Z0-9-]{1,61}[a-zA-Z0-9]\.[a-zA-Z]{2,}$/;
     if (!domainRegex.test(domain)) {
         return res.status(400).json({ 

@@ -19,7 +19,7 @@ const Navbar = () => {
       </div>
 
       <div className="flex space-x-8 items-center">
-        <div className="hidden lg:flex justify-center space-x-12 items-center border rounded-md border-white bg-white">
+        <div className="flex max-lg:hidden justify-center space-x-12 items-center border rounded-md border-white bg-white">
           <button
             onClick={handleLogout}
             className="py-2 px-3 text-violet"
