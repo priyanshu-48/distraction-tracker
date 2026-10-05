@@ -1,0 +1,54 @@
+# One-command local stack:  docker compose up --build
+#   dashboard  http://localhost:5173      API  http://localhost:3000
+# Stop any locally running server/client first (they use the same ports), or override
+# the host ports, e.g.  API_PORT=3100 WEB_PORT=5273 docker compose up --build
+#
+# Demo data (optional):
+#   docker compose run --rm api node scripts/seed.js --confirm=distraction_tracker --rows 100000
+#   then log in as demo1@example.test / demo-password
+#
+# ponytail: the web service runs the Vite dev server (the production build currently takes
+# ~6 min, see AUDIT P-07). Swap it for an nginx image serving `vite build` once that is fixed.
+
+services:
+  db:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: distraction_tracker
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "${DB_PUBLISH_PORT:-5433}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d distraction_tracker"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build: ./server
+    environment:
+      DB_HOST: db
+      DB_PORT: "5432"
+      DB_USER: postgres
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+      DB_NAME: distraction_tracker
+      # Local-development default only. Set a long random JWT_SECRET in .env for anything shared.
+      JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me}
+      CORS_ORIGINS: http://localhost:${WEB_PORT:-5173}
+    ports:
+      - "${API_PORT:-3000}:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    build: ./client
+    ports:
+      - "${WEB_PORT:-5173}:5173"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
