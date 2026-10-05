@@ -12,13 +12,25 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(72),
 });
 
-export const startTabSchema = z.object({
-  url: z.url({ protocol: /^https?$/ }).max(2048),
-  domain: z.string().min(1).max(253),
-  title: z.string().max(512).optional().default(""),
-  startTime: isoTime,
-});
+const MAX_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
-export const endTabSchema = z.object({
-  endedAt: isoTime,
+const intervalSchema = z
+  .object({
+    clientEventId: z.uuid(),
+    url: z.url({ protocol: /^https?$/ }).max(2048),
+    domain: z.string().min(1).max(253),
+    title: z.string().max(512).optional().default(""),
+    startedAt: isoTime,
+    endedAt: isoTime,
+  })
+  .refine(
+    (i) => {
+      const ms = Date.parse(i.endedAt) - Date.parse(i.startedAt);
+      return ms >= 0 && ms <= MAX_INTERVAL_MS;
+    },
+    { message: "endedAt must be after startedAt, within 24h" }
+  );
+
+export const intervalsSchema = z.object({
+  intervals: z.array(intervalSchema).min(1).max(50),
 });

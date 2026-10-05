@@ -1,36 +1,17 @@
 import db from "../db.js";
 
-export async function insertStartData(data) {
-  const { url, domain, title, startTime, userId } = data;
-  await db.query(
-    "INSERT INTO tab_activity (url, domain, title, started_at, user_id) VALUES ($1, $2, $3, $4, $5)",
-    [url, domain, title, startTime, userId]
+// Inserts finished intervals; rows whose (user_id, client_event_id) already exist are skipped,
+// so a retried upload is harmless. Returns how many rows were newly stored.
+export async function insertIntervals(userId, intervals) {
+  const col = (key) => intervals.map((i) => i[key]);
+  const result = await db.query(
+    `INSERT INTO tab_activity (user_id, client_event_id, url, domain, title, started_at, ended_at, duration)
+     SELECT $1, v.id, v.url, v.domain, v.title, v.started_at, v.ended_at,
+            EXTRACT(EPOCH FROM (v.ended_at - v.started_at))
+     FROM unnest($2::uuid[], $3::text[], $4::text[], $5::text[], $6::timestamptz[], $7::timestamptz[])
+          AS v(id, url, domain, title, started_at, ended_at)
+     ON CONFLICT (user_id, client_event_id) DO NOTHING`,
+    [userId, col("clientEventId"), col("url"), col("domain"), col("title"), col("startedAt"), col("endedAt")]
   );
+  return result.rowCount;
 }
-
-export async function updateEndTime(data) {
-  const { userId, endedAt } = data;
-  await db.query(`
-    WITH target AS (
-      SELECT id FROM tab_activity
-      WHERE user_id = $1 AND ended_at IS NULL
-      ORDER BY started_at DESC
-      LIMIT 1
-    )
-    UPDATE tab_activity
-    SET ended_at = $2,
-        duration = EXTRACT(EPOCH FROM ($2 - started_at))
-    WHERE id IN (SELECT id FROM target)
-  `, [userId, endedAt]);
-}
-
-export async function endAllTabs(userId, endTime) {
-  await db.query(`
-    UPDATE tab_activity
-    SET 
-      ended_at = $1,
-      duration = EXTRACT(EPOCH FROM ($1 - started_at))
-    WHERE user_id = $2 AND ended_at IS NULL
-    `, [endTime, userId]);
-}
-

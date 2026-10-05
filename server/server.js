@@ -20,7 +20,7 @@ const origins = (process.env.CORS_ORIGINS || "http://localhost:5173").split(",")
 
 app.use(helmet());
 app.use(cors({ origin: origins }));
-app.use(express.json({ limit: "100kb" }));
+app.use(express.json({ limit: "256kb" }));
 
 app.use("/api",tabRoute);
 app.use("/api",trackingRoute);

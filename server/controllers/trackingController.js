@@ -1,5 +1,4 @@
 import { isTracking, logSessionStart, logSessionEnd } from "../models/trackingModel.js";
-import { endAllTabs } from "../models/tabModel.js";
 
 export async function startTracking(req, res) {
   try {
@@ -14,7 +13,6 @@ export async function startTracking(req, res) {
 export async function stopTracking(req, res) {
   try {
     await logSessionEnd(req.user.id);
-    await endAllTabs(req.user.id, new Date().toISOString());
     res.json({ success: true });
   } catch (err) {
     console.error("stopTracking error:", err);
