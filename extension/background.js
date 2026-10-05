@@ -1,19 +1,10 @@
-let activeTabId = null;
-let lastTab = null;
+const API = "http://localhost:3000/api";
+const STATUS_TTL_MS = 5000;
 
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
-  activeTabId = activeInfo.tabId;
-});
-
-chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
-  if (request.type === "SET_TOKEN") {
-    chrome.storage.local.set({ token: request.token }, () => {
-      console.log("✅ Token saved in chrome.storage.local");
-      sendResponse({ status: "ok" });
-    });
-    return true;
-  }
-});
+// MV3 service workers are suspended when idle, so in-memory variables and
+// setInterval don't survive. State lives in chrome.storage.session and the
+// periodic refresh runs from chrome.alarms.
+const getState = () => chrome.storage.session.get(["tracking", "checkedAt", "lastTab"]);
 
 function getTokenAndUserId() {
   return new Promise((resolve) => {
@@ -32,109 +23,103 @@ function getTokenAndUserId() {
   });
 }
 
+async function post(path, token, body) {
+  const response = await fetch(`${API}${path}`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+    body: JSON.stringify(body)
+  });
+  if (!response.ok) throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+}
+
+async function refreshTracking() {
+  const { token } = await getTokenAndUserId();
+  let tracking = false;
+  if (token) {
+    try {
+      const res = await fetch(`${API}/is-tracking`, { headers: { Authorization: `Bearer ${token}` } });
+      tracking = res.ok && (await res.json()).isTracking;
+    } catch (err) {
+      console.error("Failed to fetch tracking status:", err);
+    }
+  }
+  // When tracking stops the server closes open rows itself, so drop our copy.
+  await chrome.storage.session.set(tracking ? { tracking, checkedAt: Date.now() } : { tracking, checkedAt: Date.now(), lastTab: null });
+  return tracking;
+}
+
+async function isTracking() {
+  const { tracking, checkedAt } = await getState();
+  return checkedAt && Date.now() - checkedAt < STATUS_TTL_MS ? tracking : refreshTracking();
+}
+
+async function sendEndData() {
+  const { lastTab } = await getState();
+  const { token } = await getTokenAndUserId();
+  if (!token || !lastTab) return;
+
+  await chrome.storage.session.set({ lastTab: null });
+  try {
+    await post("/end-tab", token, { endedAt: new Date().toISOString() });
+  } catch (err) {
+    console.error("Failed to end tab:", err);
+  }
+}
 
 async function sendStartData(tab) {
-  const { token, userId } = await getTokenAndUserId();
-  if (!token || !userId) return console.warn("No valid token or user ID");
+  const { token } = await getTokenAndUserId();
+  if (!token) return console.warn("No token; log in on the dashboard first");
 
   try {
-    const startData = {
+    await post("/start-tab", token, {
       url: tab.url,
       domain: new URL(tab.url).hostname,
-      title: tab.title,
+      title: tab.title || "",
       startTime: new Date().toISOString()
-    };
-    console.log(startData);
-    const response = await fetch("http://localhost:3000/api/start-tab", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify(startData)
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`HTTP error! ${response.status}: ${errorText}`);
-    }
-
-    lastTab = {
-      url: tab.url,
-      id: tab.id
-    };
+    await chrome.storage.session.set({ lastTab: { id: tab.id, url: tab.url } });
   } catch (err) {
     console.error("Failed to send tab data:", err);
   }
 }
 
-
-async function sendEndData() {
-  const { token, userId } = await getTokenAndUserId();
-  if (!token || !userId || !lastTab?.url) return;
-
-  try {
-    const endData = {
-      url: lastTab.url,
-      endedAt: new Date().toISOString(),
-      userId
-    };
-
-    const response = await fetch("http://localhost:3000/api/end-tab", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Authorization": `Bearer ${token}`
-      },
-      body: JSON.stringify(endData)
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`HTTP error! ${response.status}: ${errorText}`);
-    }
-  } catch (err) {
-    console.error("Failed to end tab on close:", err);
-  }
+// Close the previous tab's interval, then open one for the new tab.
+async function switchTo(tab) {
+  if (!tab.url?.startsWith("http") || !(await isTracking())) return;
+  const { lastTab } = await getState();
+  if (lastTab?.id === tab.id && lastTab.url === tab.url) return;
+  await sendEndData();
+  await sendStartData(tab);
 }
 
-
-let isExtensionTracking = false;
+chrome.tabs.onActivated.addListener(async ({ tabId }) => {
+  try {
+    await switchTo(await chrome.tabs.get(tabId));
+  } catch (err) {
+    console.error("Failed to read activated tab:", err);
+  }
+});
 
 chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (!isExtensionTracking) return;
+  if (tab.active && changeInfo.status === "complete") await switchTo(tab);
+});
 
-  if (tabId === activeTabId && changeInfo.status === "complete") {
-    if (tab.url && tab.url.startsWith("http")) {
-      await sendStartData(tab);
-      activeTabId = null;
-    }
+chrome.tabs.onRemoved.addListener(async (tabId) => {
+  const { lastTab } = await getState();
+  if (lastTab?.id === tabId) await sendEndData();
+});
+
+chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
+  if (request.type === "SET_TOKEN") {
+    chrome.storage.local.set({ token: request.token }, () => {
+      console.log("Token saved in chrome.storage.local");
+      sendResponse({ status: "ok" });
+    });
+    return true;
   }
 });
 
-chrome.tabs.onRemoved.addListener(async (tabId, removeInfo) => {
-  if (!isExtensionTracking) return;
-
-  if (lastTab && lastTab.id === tabId) {
-    try {
-      await sendEndData();
-      lastTab = null;
-    } catch (error) {
-      console.error("Failed to end tab on close:", error);
-    }
-  }
+chrome.alarms.create("poll-tracking", { periodInMinutes: 0.5 });
+chrome.alarms.onAlarm.addListener((alarm) => {
+  if (alarm.name === "poll-tracking") refreshTracking();
 });
-
-async function checkTrackingStatus() {
-  try {
-    const res = await fetch('http://localhost:3000/api/is-tracking');
-    const data = await res.json();
-
-    isExtensionTracking = data.isTracking;
-    console.log(`Tracking status: ${isExtensionTracking}`);
-  } catch (err) {
-    console.error('Failed to fetch tracking status:', err);
-  }
-}
-
-setInterval(checkTrackingStatus, 10000); 

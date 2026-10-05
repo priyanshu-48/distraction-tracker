@@ -4,6 +4,7 @@
   "description": "",
   "permissions": [
     "storage",
+    "alarms",
     "tabs",
     "activeTab"
   ],
