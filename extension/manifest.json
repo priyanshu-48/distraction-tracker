@@ -1,10 +1,11 @@
 {
-  "name": "Tab Switch Tracker",
+  "name": "Distraction Tracker",
   "version": "0.1.0",
   "description": "",
   "permissions": [
     "storage",
     "alarms",
+    "idle",
     "tabs",
     "activeTab"
   ],
@@ -49,7 +50,7 @@
       "24": "assets/ext-icon.png",
       "32": "assets/ext-icon.png"
     },
-    "default_title": "My YT Bookmarks",
+    "default_title": "Distraction Tracker",
     "default_popup": "popup.html"
   },
   "manifest_version": 3

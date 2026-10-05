@@ -1,125 +1,180 @@
 const API = "http://localhost:3000/api";
 const STATUS_TTL_MS = 5000;
+const BATCH_SIZE = 50;
+const QUEUE_CAP = 1000;
 
-// MV3 service workers are suspended when idle, so in-memory variables and
-// setInterval don't survive. State lives in chrome.storage.session and the
-// periodic refresh runs from chrome.alarms.
-const getState = () => chrome.storage.session.get(["tracking", "checkedAt", "lastTab"]);
+// Design: the extension records each focused-tab visit as one finished interval
+// with a client-generated id, queues it in chrome.storage.local, and uploads
+// batches. The server ignores ids it has seen, so retries never double-count.
+// MV3 service workers are suspended when idle, so nothing lives in JS variables:
+//   storage.session -> tracking flag, the in-progress interval
+//   storage.local   -> token, auth state, upload queue
+// ponytail: an in-progress interval lives only in session storage, so closing the
+// browser mid-visit loses that one visit. Add a periodic checkpoint if that matters.
 
-function getTokenAndUserId() {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(["token"], (result) => {
-      const token = result.token || null;
-      if (!token) return resolve({ token: null, userId: null });
+chrome.idle.setDetectionInterval(60);
 
-      try {
-        const payload = JSON.parse(atob(token.split(".")[1]));
-        resolve({ token, userId: payload.id || payload.userId });
-      } catch (err) {
-        console.error("Failed to decode token:", err);
-        resolve({ token, userId: null });
-      }
-    });
-  });
+// Events can fire concurrently; handlers touch shared storage, so run them one at a time.
+let chain = Promise.resolve();
+const serial = (fn) => (chain = chain.catch(() => {}).then(fn));
+
+const getSession = () => chrome.storage.session.get(["tracking", "checkedAt", "current"]);
+
+function decodeUserId(token) {
+  try {
+    const payload = JSON.parse(atob(token.split(".")[1]));
+    return payload.id || payload.userId || null;
+  } catch {
+    return null;
+  }
 }
 
-async function post(path, token, body) {
-  const response = await fetch(`${API}${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-    body: JSON.stringify(body)
-  });
-  if (!response.ok) throw new Error(`HTTP ${response.status}: ${await response.text()}`);
+async function getToken() {
+  return (await chrome.storage.local.get("token")).token || null;
+}
+
+// A 401 means the token expired or was revoked: forget it and let the popup say so.
+async function markLoggedOut() {
+  await chrome.storage.local.remove("token");
+  await chrome.storage.local.set({ authState: "logged_out" });
+}
+
+async function enqueue(interval) {
+  const { queue = [] } = await chrome.storage.local.get("queue");
+  queue.push(interval);
+  await chrome.storage.local.set({ queue: queue.slice(-QUEUE_CAP) });
+}
+
+async function flush() {
+  const token = await getToken();
+  if (!token) return;
+
+  for (;;) {
+    const { queue = [] } = await chrome.storage.local.get("queue");
+    const batch = queue.slice(0, BATCH_SIZE);
+    if (!batch.length) return;
+
+    let res;
+    try {
+      res = await fetch(`${API}/intervals`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ intervals: batch })
+      });
+    } catch (err) {
+      return console.warn("Upload failed, will retry:", err.message); // offline/server down: keep queue
+    }
+
+    if (res.status === 401) return markLoggedOut();
+    if (!res.ok && res.status !== 400) return console.warn(`Upload failed (${res.status}), will retry`);
+    if (res.status === 400) console.error("Server rejected batch, dropping it:", await res.text());
+
+    // Remove only what we sent; new intervals may have been queued meanwhile.
+    const sent = new Set(batch.map((i) => i.clientEventId));
+    const latest = (await chrome.storage.local.get("queue")).queue || [];
+    await chrome.storage.local.set({ queue: latest.filter((i) => !sent.has(i.clientEventId)) });
+  }
+}
+
+// Finish the in-progress interval (if any), queue it and try to upload.
+async function closeCurrent() {
+  const { current } = await getSession();
+  if (!current) return;
+  await chrome.storage.session.remove("current");
+  if (Date.now() - Date.parse(current.startedAt) < 1000) return; // ignore sub-second flickers
+  const { tabId, ...interval } = current;
+  await enqueue({ ...interval, endedAt: new Date().toISOString() });
+  await flush();
 }
 
 async function refreshTracking() {
-  const { token } = await getTokenAndUserId();
+  const token = await getToken();
+  const was = (await getSession()).tracking;
   let tracking = false;
   if (token) {
     try {
       const res = await fetch(`${API}/is-tracking`, { headers: { Authorization: `Bearer ${token}` } });
-      tracking = res.ok && (await res.json()).isTracking;
+      if (res.status === 401) await markLoggedOut();
+      else tracking = res.ok && (await res.json()).isTracking;
     } catch (err) {
       console.error("Failed to fetch tracking status:", err);
+      return was; // can't tell; keep the last known state
     }
   }
-  // When tracking stops the server closes open rows itself, so drop our copy.
-  await chrome.storage.session.set(tracking ? { tracking, checkedAt: Date.now() } : { tracking, checkedAt: Date.now(), lastTab: null });
+  await chrome.storage.session.set({ tracking, checkedAt: Date.now() });
+  // ponytail: stop is noticed on the next poll (<=30s), so the last interval can run a little long.
+  if (was && !tracking) await closeCurrent();
+  if (!was && tracking) await followActiveTab();
   return tracking;
 }
 
 async function isTracking() {
-  const { tracking, checkedAt } = await getState();
+  const { tracking, checkedAt } = await getSession();
   return checkedAt && Date.now() - checkedAt < STATUS_TTL_MS ? tracking : refreshTracking();
 }
 
-async function sendEndData() {
-  const { lastTab } = await getState();
-  const { token } = await getTokenAndUserId();
-  if (!token || !lastTab) return;
-
-  await chrome.storage.session.set({ lastTab: null });
-  try {
-    await post("/end-tab", token, { endedAt: new Date().toISOString() });
-  } catch (err) {
-    console.error("Failed to end tab:", err);
-  }
-}
-
-async function sendStartData(tab) {
-  const { token } = await getTokenAndUserId();
-  if (!token) return console.warn("No token; log in on the dashboard first");
-
-  try {
-    await post("/start-tab", token, {
+// Make `tab` the in-progress interval (closing the previous one).
+async function startFor(tab) {
+  if (!tab?.url?.startsWith("http") || !(await isTracking())) return closeCurrent();
+  const { current } = await getSession();
+  if (current?.tabId === tab.id && current.url === tab.url) return;
+  await closeCurrent();
+  await chrome.storage.session.set({
+    current: {
+      tabId: tab.id,
+      clientEventId: crypto.randomUUID(),
       url: tab.url,
       domain: new URL(tab.url).hostname,
       title: tab.title || "",
-      startTime: new Date().toISOString()
-    });
-    await chrome.storage.session.set({ lastTab: { id: tab.id, url: tab.url } });
-  } catch (err) {
-    console.error("Failed to send tab data:", err);
-  }
+      startedAt: new Date().toISOString()
+    }
+  });
 }
 
-// Close the previous tab's interval, then open one for the new tab.
-async function switchTo(tab) {
-  if (!tab.url?.startsWith("http") || !(await isTracking())) return;
-  const { lastTab } = await getState();
-  if (lastTab?.id === tab.id && lastTab.url === tab.url) return;
-  await sendEndData();
-  await sendStartData(tab);
+async function followActiveTab() {
+  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  await startFor(tab);
 }
 
-chrome.tabs.onActivated.addListener(async ({ tabId }) => {
-  try {
-    await switchTo(await chrome.tabs.get(tabId));
-  } catch (err) {
-    console.error("Failed to read activated tab:", err);
-  }
+chrome.tabs.onActivated.addListener(({ tabId }) =>
+  serial(async () => startFor(await chrome.tabs.get(tabId)))
+);
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (tab.active && changeInfo.status === "complete") serial(() => startFor(tab));
 });
 
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-  if (tab.active && changeInfo.status === "complete") await switchTo(tab);
-});
+chrome.tabs.onRemoved.addListener((tabId) =>
+  serial(async () => {
+    if ((await getSession()).current?.tabId === tabId) await closeCurrent();
+  })
+);
 
-chrome.tabs.onRemoved.addListener(async (tabId) => {
-  const { lastTab } = await getState();
-  if (lastTab?.id === tabId) await sendEndData();
-});
+// Only count time when a browser window is focused and the user is not idle.
+chrome.windows.onFocusChanged.addListener((windowId) =>
+  serial(() => (windowId === chrome.windows.WINDOW_ID_NONE ? closeCurrent() : followActiveTab()))
+);
+
+chrome.idle.onStateChanged.addListener((state) =>
+  serial(() => (state === "active" ? followActiveTab() : closeCurrent()))
+);
 
 chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => {
-  if (request.type === "SET_TOKEN") {
-    chrome.storage.local.set({ token: request.token }, () => {
-      console.log("Token saved in chrome.storage.local");
-      sendResponse({ status: "ok" });
-    });
-    return true;
-  }
+  if (request.type !== "SET_TOKEN") return;
+  serial(async () => {
+    const { lastUserId } = await chrome.storage.local.get("lastUserId");
+    const userId = decodeUserId(request.token);
+    // A different account must not inherit the previous user's queued visits.
+    if (lastUserId && userId !== lastUserId) await chrome.storage.local.remove("queue");
+    await chrome.storage.local.set({ token: request.token, authState: "ok", lastUserId: userId });
+    await refreshTracking();
+    await flush();
+    sendResponse({ status: "ok" });
+  });
+  return true;
 });
 
-chrome.alarms.create("poll-tracking", { periodInMinutes: 0.5 });
+chrome.alarms.create("poll", { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener((alarm) => {
-  if (alarm.name === "poll-tracking") refreshTracking();
+  if (alarm.name === "poll") serial(async () => { await refreshTracking(); await flush(); });
 });

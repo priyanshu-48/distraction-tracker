@@ -1,0 +1,7 @@
+body { width: 260px; margin: 0; padding: 14px 16px; font: 14px/1.4 system-ui, sans-serif; color: #1f2937; }
+h1 { margin: 0 0 8px; font-size: 15px; }
+#status { margin: 0; font-weight: 600; }
+#status::before { content: ""; display: inline-block; width: 9px; height: 9px; margin-right: 8px; border-radius: 50%; background: #9ca3af; }
+#status.ok::before { background: #16a34a; }
+#status.warn::before { background: #dc2626; }
+#detail { margin: 6px 0 0; color: #6b7280; font-size: 12px; }
