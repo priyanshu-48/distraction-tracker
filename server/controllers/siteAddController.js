@@ -34,6 +34,12 @@ export async function siteAddController(req, res) {
             data: newSite
         });
     } catch (err) {
+        if (err.code === '23505') {
+            return res.status(409).json({
+                error: "Conflict",
+                message: "Site already added"
+            });
+        }
         console.error('Site add error:', err);
         res.status(500).json({ 
             error: "Internal server error",
