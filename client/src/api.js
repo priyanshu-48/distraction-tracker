@@ -9,6 +9,10 @@ api.interceptors.request.use((config) => {
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+  // "Today" and "this week" are computed server-side in the user's timezone.
+  if (config.url?.startsWith('/analytics')) {
+    config.params = { tz: Intl.DateTimeFormat().resolvedOptions().timeZone, ...config.params };
+  }
   return config;
 });
 
