@@ -6,7 +6,7 @@ function Login() {
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
-    const EXTENSION_ID = process.env.REACT_APP_EXTENSION_ID;
+    const EXTENSION_ID = import.meta.env.VITE_EXTENSION_ID;
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -16,9 +16,9 @@ function Login() {
     }, [navigate]);
 
     async function sendTokenToExtension(token) {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             if (!window.chrome?.runtime?.sendMessage) {
-                return reject(new Error("Extension not available."));
+                return resolve(); // no extension installed: login still succeeds
             }
 
             if (!EXTENSION_ID) {
@@ -26,12 +26,12 @@ function Login() {
                 return resolve();
             }
 
-            chrome.runtime.sendMessage(
+            window.chrome.runtime.sendMessage(
                 EXTENSION_ID,
                 { type: "SET_TOKEN", token },
                 (response) => {
-                    if (chrome.runtime.lastError || !response) {
-                        console.warn("Extension communication failed:", chrome.runtime.lastError);
+                    if (window.chrome.runtime.lastError || !response) {
+                        console.warn("Extension communication failed:", window.chrome.runtime.lastError);
                         return resolve();
                     }
                     resolve(response);
@@ -53,7 +53,7 @@ function Login() {
             await sendTokenToExtension(token);
             navigate("/dashboard");
         } catch (err) {
-            alert(err.message || "Login failed");
+            alert(err.response?.data?.message || "Login failed");
         }
     };
 
