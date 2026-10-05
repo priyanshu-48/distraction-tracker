@@ -1,4 +1,4 @@
-import { useState,useEffect, use } from "react";
+import { useState, useEffect } from "react";
 import api from "../../api.js";
 import {
     BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer,CartesianGrid,

@@ -1,5 +1,7 @@
 # Distraction Tracker
 
+[![CI](https://github.com/priyanshu-48/distraction-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/priyanshu-48/distraction-tracker/actions/workflows/ci.yml)
+
 Distraction Tracker is a full-stack productivity analytics system that helps users understand how they spend time on distracting websites.
 
 It consists of a browser extension, a Node.js backend, and a React dashboard that visualizes detailed usage analytics.
