@@ -1,14 +1,17 @@
 import React from "react";
 import settingsLogo from "../assets/settings.png";
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
+import { logout } from '../app/auth';
 
 const Navbar = () => {
 
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  // Also tells the extension, so it stops recording as this account.
+  const handleLogout = async () => {
+    await logout(queryClient);
     navigate('/login');
   };
 

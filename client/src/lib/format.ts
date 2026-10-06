@@ -42,3 +42,16 @@ export function formatDayHeading(date: Date, timeZone?: string): string {
     .format(date)
     .replace(/^(\w+) /, "$1, ");
 }
+
+/** "just now", "5 min ago", "3 h ago", or a short date once it is older than a day. */
+export function formatAgo(iso: string | null, nowMs: number = Date.now()): string {
+  const then = iso ? Date.parse(iso) : Number.NaN;
+  if (Number.isNaN(then)) return "never";
+  const seconds = Math.max(0, Math.round((nowMs - then) / 1000));
+  if (seconds < 45) return "just now";
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return `${Math.max(1, minutes)} min ago`;
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return `${hours} h ago`;
+  return new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" }).format(then);
+}

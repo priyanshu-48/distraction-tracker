@@ -6,6 +6,7 @@ import { Segmented } from "@/components/ui/segmented";
 import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState, ErrorState } from "@/components/ui/states";
 import { useDebouncedValue } from "@/lib/hooks";
+import { SessionControl } from "@/features/session/SessionControl";
 import { AddSiteForm } from "./AddSiteForm";
 import { useMarkSite, useSites } from "./queries";
 import { ROW_GRID, SiteRow } from "./SiteRow";
@@ -53,7 +54,7 @@ export default function SitesPage() {
   const narrowed = filter !== "all" || q !== "";
 
   return (
-    <AppShell title="Sites">
+    <AppShell title="Sites" actions={<SessionControl />}>
       <div className="mx-auto max-w-5xl space-y-5">
         <p className="text-ink-muted">
           Switch a site on to count its time as a distraction. Everything else counts as other time.

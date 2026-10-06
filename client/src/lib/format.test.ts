@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDayHeading, formatDuration, formatPercent, siteLabel } from "./format";
+import { formatAgo, formatDayHeading, formatDuration, formatPercent, siteLabel } from "./format";
 
 describe("formatDuration", () => {
   it.each([
@@ -53,5 +53,32 @@ describe("formatDayHeading", () => {
     const instant = new Date("2026-10-05T20:00:00Z");
     expect(formatDayHeading(instant, "UTC")).toBe("Mon, 5 Oct");
     expect(formatDayHeading(instant, "Asia/Kolkata")).toBe("Tue, 6 Oct");
+  });
+});
+
+describe("formatAgo", () => {
+  const now = Date.parse("2026-10-06T12:00:00Z");
+  const before = (seconds: number) => new Date(now - seconds * 1000).toISOString();
+
+  it.each([
+    [10, "just now"],
+    [44, "just now"],
+    [60, "1 min ago"],
+    [150, "3 min ago"],
+    [59 * 60, "59 min ago"],
+    [3 * 3600, "3 h ago"],
+    [23 * 3600, "23 h ago"],
+  ])("%s seconds ago -> %s", (seconds, expected) => {
+    expect(formatAgo(before(seconds), now)).toBe(expected);
+  });
+
+  it("falls back to a date after a day", () => {
+    expect(formatAgo(before(3 * 86400), now)).toBe("3 Oct");
+  });
+
+  it("handles a missing, invalid or future time", () => {
+    expect(formatAgo(null, now)).toBe("never");
+    expect(formatAgo("garbage", now)).toBe("never");
+    expect(formatAgo(before(-30), now)).toBe("just now");
   });
 });

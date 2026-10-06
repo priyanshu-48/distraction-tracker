@@ -1,6 +1,7 @@
 import * as React from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { BottomTabs } from "./BottomTabs";
+import { LogoutButton } from "./LogoutButton";
 import { NavRail } from "./NavRail";
 
 interface AppShellProps {
@@ -22,7 +23,10 @@ export function AppShell({ title, actions, children }: AppShellProps) {
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="flex items-center justify-between gap-4 px-4 py-4 md:px-8">
             <h1 className="text-xl font-semibold tracking-tight">{title}</h1>
-            <div className="flex items-center gap-3">{actions}</div>
+            <div className="flex items-center gap-3">
+              {actions}
+              <LogoutButton />
+            </div>
           </header>
           <main className="flex-1 px-4 pb-24 md:px-8 md:pb-8">{children}</main>
         </div>

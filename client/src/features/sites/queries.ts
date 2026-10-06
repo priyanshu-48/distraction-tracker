@@ -15,11 +15,12 @@ async function putMarked(domain: string, marked: boolean) {
 }
 
 /** The user's sites for a window and filter. The previous page stays on screen while the next loads. */
-export function useSites(params: SitesParams) {
+export function useSites(params: SitesParams, options: { refetchInterval?: number } = {}) {
   return useQuery({
     queryKey: [...SITES_KEY, params],
     queryFn: () => fetchSites(params),
     placeholderData: keepPreviousData,
+    ...options,
   });
 }
 
