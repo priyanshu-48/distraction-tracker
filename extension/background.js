@@ -1,4 +1,6 @@
 const API = "http://localhost:3000/api";
+// The dashboard is the one page we never record (also the only origin allowed in manifest externally_connectable).
+const DASHBOARD_ORIGIN = "http://localhost:5173";
 const STATUS_TTL_MS = 5000;
 const BATCH_SIZE = 50;
 const QUEUE_CAP = 1000;
@@ -113,9 +115,13 @@ async function isTracking() {
   return checkedAt && Date.now() - checkedAt < STATUS_TTL_MS ? tracking : refreshTracking();
 }
 
+function isTrackable(url) {
+  return !!url?.startsWith("http") && new URL(url).origin !== DASHBOARD_ORIGIN;
+}
+
 // Make `tab` the in-progress interval (closing the previous one).
 async function startFor(tab) {
-  if (!tab?.url?.startsWith("http") || !(await isTracking())) return closeCurrent();
+  if (!isTrackable(tab?.url) || !(await isTracking())) return closeCurrent();
   const { current } = await getSession();
   if (current?.tabId === tab.id && current.url === tab.url) return;
   await closeCurrent();
