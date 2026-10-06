@@ -251,10 +251,10 @@ describe("the timeline", () => {
   it("switches between the active hours and the full day", async () => {
     const user = userEvent.setup();
     renderDay();
-    const toggle = await screen.findByRole("button", { name: "Full day" });
+    const toggle = await screen.findByRole("button", { name: "Show full day" });
     expect(screen.queryByText("24:00")).toBeNull();
     await user.click(toggle);
-    expect(screen.getByRole("button", { name: "Active hours" }).getAttribute("aria-pressed")).toBe("true");
+    expect(screen.getByRole("button", { name: "Show active hours" })).toBeTruthy();
     expect(screen.getByText("24:00")).toBeTruthy();
   });
 
@@ -266,15 +266,19 @@ describe("the timeline", () => {
 });
 
 describe("marking sites from the Day view", () => {
-  it("unmarks a top distraction and then reloads the day", async () => {
-    const user = userEvent.setup();
+  it("keeps the Day view uncluttered: the only switches are the ones in To classify", async () => {
     renderDay();
-    const toggle = await screen.findByRole("switch", { name: "Count reddit.com as a distraction" });
-    expect(toggle.getAttribute("aria-checked")).toBe("true");
+    await screen.findByText("Top distractions");
+    const switches = screen.getAllByRole("switch").map((s) => s.getAttribute("aria-label") ?? s.id);
+    expect(switches).toHaveLength(1); // news.site, the one site to classify
+    expect(screen.queryByRole("switch", { name: "Count reddit.com as a distraction" })).toBeNull();
+    expect(screen.queryByRole("switch", { name: "Count youtube.com as a distraction" })).toBeNull();
+  });
 
-    await user.click(toggle);
-    await waitFor(() => expect(api.put).toHaveBeenCalledWith("/sites/reddit.com", { marked: false }));
-    await waitFor(() => expect(api.get).toHaveBeenCalledTimes(2)); // the summary is fetched again
+  it("marks distraction visits in the recent list with a dot and a spoken label", async () => {
+    renderDay();
+    const card = (await screen.findByText("Recent visits")).closest("div") as HTMLElement;
+    expect(within(card).getAllByText("Distraction")).toHaveLength(1); // only the first visit is marked in the fixture
   });
 
   it("marks an unclassified site as a distraction", async () => {
@@ -314,13 +318,6 @@ describe("marking sites from the Day view", () => {
     await user.click(within(status).getByRole("button", { name: "Undo" }));
     expect(api.put).toHaveBeenCalledWith("/sites/news.site", { marked: false });
     await waitFor(() => expect(screen.queryByRole("status")).toBeNull());
-  });
-
-  it("does not offer an undo when switching a site off", async () => {
-    const user = userEvent.setup();
-    renderDay();
-    await user.click(await screen.findByRole("switch", { name: "Count reddit.com as a distraction" }));
-    expect(screen.queryByRole("status")).toBeNull();
   });
 
   it("hides the classify card when there is nothing to classify", async () => {

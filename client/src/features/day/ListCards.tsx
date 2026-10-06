@@ -59,7 +59,6 @@ export function TopSitesCard({
                 </button>
                 {site.type === "checking" ? <Badge tone="purple">checking habit</Badge> : null}
                 {site.type === "binge" ? <Badge tone="coral">binge</Badge> : null}
-                <MarkSwitch domain={site.domain} marked />
               </div>
               <div className="mt-1.5 h-2 rounded-full bg-raised" aria-hidden="true">
                 <div className="h-2 rounded-full bg-coral" style={{ width: `${(site.seconds / biggest) * 100}%` }} />
@@ -112,7 +111,7 @@ export function TriggersCard({ triggers }: { triggers: DaySummary["triggers"] })
 
 const SHOWN_AT_FIRST = 8;
 
-/** Newest visits first, in the user's own clock, each with the same mark switch. */
+/** Newest visits first, in the user's own clock; a coral dot marks the ones that were distractions. */
 export function RecentVisits({ visits, timeZone }: { visits: DaySummary["recent"]; timeZone: string }) {
   const [all, setAll] = useState(false);
   const clock = new Intl.DateTimeFormat("en-GB", { hour: "2-digit", minute: "2-digit", hourCycle: "h23", timeZone });
@@ -131,7 +130,13 @@ export function RecentVisits({ visits, timeZone }: { visits: DaySummary["recent"
                 <span className="w-12 shrink-0 text-sm text-ink-muted">{clock.format(new Date(visit.startedAt))}</span>
                 <SiteName domain={visit.domain} className="flex-1" />
                 <span className="shrink-0 text-sm text-ink-muted">{formatDuration(visit.seconds)}</span>
-                <MarkSwitch domain={visit.domain} marked={visit.marked} />
+                {visit.marked ? (
+                  <span className="size-2.5 shrink-0 rounded-full bg-coral" title="Distraction">
+                    <span className="sr-only">Distraction</span>
+                  </span>
+                ) : (
+                  <span className="size-2.5 shrink-0" aria-hidden="true" />
+                )}
               </li>
             ))}
           </ul>

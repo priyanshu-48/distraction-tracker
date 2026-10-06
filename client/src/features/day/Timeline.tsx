@@ -1,9 +1,10 @@
 import { useState } from "react";
+import { Maximize2, Minimize2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { formatDuration } from "@/lib/format";
 import { siteInfo } from "@/lib/siteInfo";
-import { buildTimelineModel, clockTime, describeSession } from "./timelineModel";
+import { buildTimelineModel, clockTime, listSessions } from "./timelineModel";
 import type { DaySummary } from "./types";
 
 interface TimelineProps {
@@ -26,19 +27,29 @@ interface TimelineProps {
 export function Timeline({ timeline, timeZone, isToday, nowMs, active, onHover, onPick }: TimelineProps) {
   const [fullDay, setFullDay] = useState(false);
   const model = buildTimelineModel(timeline, { timeZone, isToday, nowMs, fullDay });
+  const sessions = listSessions(timeline.sessions, timeZone, nowMs, isToday);
   const pct = (fraction: number) => `${fraction * 100}%`;
 
   return (
     <Card>
       <div className="flex items-center justify-between gap-2">
         <CardTitle>When</CardTitle>
-        <Button variant="ghost" size="sm" aria-pressed={fullDay} onClick={() => setFullDay(!fullDay)}>
-          {fullDay ? "Active hours" : "Full day"}
+        <Button variant="ghost" size="sm" onClick={() => setFullDay(!fullDay)}>
+          {fullDay ? <Minimize2 aria-hidden="true" /> : <Maximize2 aria-hidden="true" />}
+          {fullDay ? "Show active hours" : "Show full day"}
         </Button>
       </div>
 
       <div className="mt-4" aria-hidden="true">
         <div className="relative h-14">
+          {model.breaks.map((gap, index) => (
+            <div
+              key={`break-${index}`}
+              className="absolute inset-y-0 border-l border-dashed border-ink-muted/60"
+              style={{ left: pct(gap.left + gap.width / 2) }}
+              title="Nothing was tracked here"
+            />
+          ))}
           {model.sessions.map((band, index) => (
             <div key={index} className="absolute inset-y-0 rounded-md bg-raised/60" style={{ left: pct(band.left), width: pct(band.width) }} />
           ))}
@@ -65,9 +76,9 @@ export function Timeline({ timeline, timeZone, isToday, nowMs, active, onHover, 
         <div className="relative mt-1 h-4 text-xs text-ink-muted">
           {model.ticks.map((tick) => (
             <span
-              key={tick.label}
+              key={`${tick.left}-${tick.label}`}
               className="absolute"
-              style={{ left: pct(tick.left), transform: tick.left < 0.02 ? "none" : tick.left > 0.98 ? "translateX(-100%)" : "translateX(-50%)" }}
+              style={{ left: pct(tick.left), transform: tick.align === "start" ? "none" : tick.align === "end" ? "translateX(-100%)" : "translateX(-50%)" }}
             >
               {tick.label}
             </span>
@@ -89,9 +100,15 @@ export function Timeline({ timeline, timeZone, isToday, nowMs, active, onHover, 
 
       {timeline.sessions.length > 0 ? (
         <ul className="mt-4 space-y-1 text-sm">
-          {timeline.sessions.map((session) => (
-            <li key={session.start}>{describeSession(session, timeZone, nowMs, isToday)}</li>
+          {sessions.lines.map((line) => (
+            <li key={line.key}>{line.text}</li>
           ))}
+          {sessions.hidden > 0 ? (
+            <li className="text-ink-muted">
+              {sessions.lines.length > 0 ? "+ " : ""}
+              {sessions.hidden} very short {sessions.hidden === 1 ? "session" : "sessions"}
+            </li>
+          ) : null}
         </ul>
       ) : (
         <p className="mt-4 text-sm text-ink-muted">No tracking session was recorded; the bars show the visits on their own.</p>
