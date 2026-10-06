@@ -12,6 +12,7 @@ export default defineConfig({
       DB_NAME: process.env.TEST_DB_NAME || "dt_test",
       JWT_SECRET: "test-secret",
       AUTH_RATE_LIMIT: "1000",
+      LOG_LEVEL: "silent",
     },
   },
 });

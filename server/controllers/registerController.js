@@ -8,17 +8,12 @@ export async function register(req, res) {
             message: "Registration successful"
         });
     } catch (err) {
-        if (err.code === '23505') { //db violation if already registered 
+        if (err.code === '23505') { //db violation if already registered
             return res.status(409).json({
                 error: "Registration failed",
                 message: "Email already registered"
             });
-        } else {
-            console.error('Registration error:', err);
-            res.status(500).json({
-                error: "Registration failed",
-                message: "Internal server error"
-            });
         }
+        throw err;
     }
 };

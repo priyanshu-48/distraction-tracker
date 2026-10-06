@@ -1,5 +1,6 @@
 import pg from "pg";
 import dotenv from "dotenv";
+import logger from "./logger.js";
 dotenv.config();
 
 const db = new pg.Pool({
@@ -12,6 +13,6 @@ const db = new pg.Pool({
 });
 
 // An idle client can error (e.g. Postgres restarted); log it instead of crashing.
-db.on("error", (err) => console.error("Unexpected Postgres pool error:", err.message));
+db.on("error", (err) => logger.error({ err }, "Unexpected Postgres pool error"));
 
 export default db;
