@@ -53,16 +53,16 @@ describe("POST /api/auth/login", () => {
   });
 });
 
-describe("token verification (GET /api/auth/dashboard)", () => {
+describe("token verification (any protected route)", () => {
   const get = (authorization) => {
-    const r = http().get("/api/auth/dashboard");
+    const r = http().get("/api/is-tracking");
     return authorization ? r.set("Authorization", authorization) : r;
   };
   const sign = (payload, options = {}, secret = process.env.JWT_SECRET) => jwt.sign(payload, secret, options);
 
   it("accepts a valid token", async () => {
     const user = await makeUser();
-    await http().get("/api/auth/dashboard").set(user.auth).expect(200);
+    await http().get("/api/is-tracking").set(user.auth).expect(200);
   });
 
   it.each([
