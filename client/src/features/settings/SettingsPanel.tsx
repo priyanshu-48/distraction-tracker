@@ -5,14 +5,16 @@ import { getToken } from "@/app/auth";
 import { syncToken } from "@/lib/extension";
 import { ExtensionCard } from "@/features/setup/ExtensionCard";
 import { useExtensionState } from "@/features/setup/useSetupStatus";
+import { BudgetForm } from "./BudgetForm";
 
-/** Settings panel. The daily budget, time zone and data controls are added in Phase 5. */
+/** Settings panel. The time zone and data controls are added in Phase 5. */
 export default function SettingsPanel() {
   const extension = useExtensionState();
   const needsReconnect = extension.data?.kind === "connected" && !(extension.data.report.hasToken && extension.data.report.authState === "ok");
 
   return (
     <div className="space-y-5">
+      <BudgetForm />
       <ExtensionCard state={extension.data} />
       {needsReconnect ? (
         <Button

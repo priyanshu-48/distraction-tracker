@@ -102,6 +102,11 @@ const MONTHS_LONG = [
 ];
 const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
+const WEEKDAYS_LONG = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+/** "Monday" for a "YYYY-MM-DD" date. */
+export const weekdayName = (date: string) => WEEKDAYS_LONG[new Date(parse(date)).getUTCDay()];
+
 /** "5 Oct" */
 const dayMonth = (date: string) => `${+date.slice(8)} ${MONTHS[+date.slice(5, 7) - 1]}`;
 

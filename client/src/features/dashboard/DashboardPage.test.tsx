@@ -21,6 +21,19 @@ vi.mock("@/api", () => ({
     get: vi.fn(async (url: string) => {
       if (url === "/is-tracking") return { data: { isTracking: world.tracking } };
       if (url === "/sites") return { data: { days: 90, total: world.totalVisits, sites: [] } };
+      if (url === "/settings") return { data: { dailyBudgetSeconds: 7200 } };
+      // An untracked day: the page shows its empty state, which is all these tests need from the Day view.
+      if (url === "/summary") {
+        return {
+          data: {
+            date: "2026-10-05", timeZone: "UTC", budgetSeconds: 7200,
+            totals: { distractedSeconds: 0, otherSeconds: 0, trackedSeconds: 0, visits: 0, avgVisitSeconds: 0, type: null },
+            topSites: [], toClassify: [], recent: [], triggers: [],
+            focus: { longestStretchSeconds: 0, firstDistractionAfterSeconds: null },
+            hourly: [], comparison: { date: "2026-09-28", distractedSeconds: 0 },
+          },
+        };
+      }
       throw new Error(`unexpected GET ${url}`);
     }),
     post: vi.fn(async () => ({ data: {} })),

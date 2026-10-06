@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Sheet } from "@/components/ui/sheet";
 import { Skeleton } from "@/components/ui/skeleton";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { DayView } from "@/features/day/DayView";
 import { SetupBanner } from "@/features/setup/SetupBanner";
 import { DashboardHeader } from "./DashboardHeader";
 import { useDashboardState, type Panel } from "./useDashboardState";
@@ -28,17 +29,21 @@ export default function DashboardPage() {
         <DashboardHeader state={state} />
         <main className="mx-auto max-w-6xl px-4 pt-6 pb-16 md:px-8">
           <SetupBanner />
-          {/* Replaced by the period's widgets in the next step. */}
-          <Card className="space-y-2">
-            <h2 className="text-lg font-semibold">{state.label}</h2>
-            <p className="text-ink-muted">
-              The {state.period.view} view arrives in the next step. Until then your numbers are on the{" "}
-              <Link to="/dashboard" className="font-semibold text-teal hover:underline">
-                previous dashboard
-              </Link>
-              .
-            </p>
-          </Card>
+          {state.period.view === "day" ? (
+            <DayView date={state.period.date} isToday={state.isCurrent} onOpenSites={() => state.openPanel("sites")} />
+          ) : (
+            // The week and month views are the next piece of work; the old dashboard still has weekly charts.
+            <Card className="space-y-2">
+              <h2 className="text-lg font-semibold">{state.label}</h2>
+              <p className="text-ink-muted">
+                The {state.period.view} view arrives next. Until then your weekly charts are on the{" "}
+                <Link to="/dashboard" className="font-semibold text-teal hover:underline">
+                  previous dashboard
+                </Link>
+                .
+              </p>
+            </Card>
+          )}
         </main>
 
         {(Object.keys(panelTitles) as Panel[]).map((name) => (

@@ -1,6 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { formatDuration } from "@/lib/format";
+import { SiteName } from "./SiteName";
 import type { Site } from "./types";
 
 interface SiteRowProps {
@@ -21,9 +22,7 @@ export function SiteRow({ site, onToggle }: SiteRowProps) {
   return (
     <li className={`${ROW_GRID} rounded-xl bg-card px-4 py-3`}>
       <div className="min-w-0">
-        <p className="truncate font-semibold" title={site.domain}>
-          {site.domain}
-        </p>
+        <SiteName domain={site.domain} className="font-semibold" />
       </div>
 
       {/* Visually these are columns on wide screens and a single line on phones. */}

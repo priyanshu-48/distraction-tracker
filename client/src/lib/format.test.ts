@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatAgo, formatDayHeading, formatDuration, formatPercent, siteLabel } from "./format";
+import { formatAgo, formatDayHeading, formatDuration, formatDurationCoarse, formatPercent, siteLabel } from "./format";
 
 describe("formatDuration", () => {
   it.each([
@@ -37,6 +37,23 @@ describe("formatPercent", () => {
   it("is 0% when the whole is zero or invalid", () => {
     expect(formatPercent(5, 0)).toBe("0%");
     expect(formatPercent(Number.NaN, 10)).toBe("0%");
+  });
+});
+
+describe("formatDurationCoarse", () => {
+  it.each([
+    [0, "0s"],
+    [45, "45s"],
+    [59, "59s"],
+    [60, "1m"],
+    [1015, "17m"], // 16m 55s
+    [2846, "47m"],
+    [3580, "1h"], // 59m 40s rounds up to the hour
+    [6200, "1h 43m"],
+    [-5, "0s"],
+    [Number.NaN, "0s"],
+  ])("%s seconds is %s", (seconds, expected) => {
+    expect(formatDurationCoarse(seconds)).toBe(expected);
   });
 });
 

@@ -22,6 +22,15 @@ export function formatDuration(totalSeconds: number): string {
   return shown.map(([value, unit]) => `${value}${unit}`).join(" ");
 }
 
+/**
+ * Like formatDuration, but rounded to the minute from one minute up ("16m 55s" reads "17m"). For headline
+ * numbers, where seconds are noise and make the figure longer than it needs to be.
+ */
+export function formatDurationCoarse(totalSeconds: number): string {
+  const total = Number.isFinite(totalSeconds) ? Math.max(0, totalSeconds) : 0;
+  return formatDuration(total >= 60 ? Math.round(total / 60) * 60 : total);
+}
+
 /** Whole-number percentage ("45%"); not clamped, so an over-budget day can read "130%". */
 export function formatPercent(part: number, whole: number): string {
   if (!whole || !Number.isFinite(part) || !Number.isFinite(whole)) return "0%";

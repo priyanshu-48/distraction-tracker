@@ -45,6 +45,11 @@ export function useMarkSite() {
     onError: (_error, _variables, context) => {
       context?.snapshots.forEach(([key, data]) => queryClient.setQueryData(key, data));
     },
-    onSettled: () => queryClient.invalidateQueries({ queryKey: SITES_KEY }),
+    // The Day view shows marked sites too, so it has to catch up as well.
+    onSettled: () =>
+      Promise.all([
+        queryClient.invalidateQueries({ queryKey: SITES_KEY }),
+        queryClient.invalidateQueries({ queryKey: ["summary"] }),
+      ]),
   });
 }
