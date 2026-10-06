@@ -1,9 +1,5 @@
-import './App.css'
 import { lazy, Suspense } from 'react';
 import {Routes,Route,Navigate} from "react-router-dom";
-import Dashboard from './layout/Dashboard';
-import Analytics from "./pages/AnalyticsPage";
-import HomePage from './pages/HomePage';
 import Login from './features/auth/LoginPage';
 import Register from './features/auth/RegisterPage';
 import { ExtensionTokenSync } from './app/ExtensionTokenSync';
@@ -27,17 +23,8 @@ function App() {
       <Route path="/setup" element={<Navigate to="/" replace />} />
       <Route path='/login' element={<Login />} />
       <Route path='/register' element={<Register />} />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <Dashboard />
-          </ProtectedRoute>
-        }
-      >
-        <Route index element={<HomePage />} />
-        <Route path="analytics" element={<Analytics />} />
-      </Route>
+      {/* The old dashboard pages are gone; old bookmarks land on the new one. */}
+      <Route path="/dashboard/*" element={<Navigate to="/" replace />} />
     </Routes>
     </>
   );
