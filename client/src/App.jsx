@@ -11,6 +11,7 @@ import RootRedirect from './pages/RootRedirect';
 
 // Design-system gallery for the new UI; only exists in development, never in a production build.
 const DesignPage = import.meta.env.DEV ? lazy(() => import('./app/DesignPage')) : null;
+const SitesPage = lazy(() => import('./features/sites/SitesPage'));
 
 function App() {
   return(
@@ -18,6 +19,7 @@ function App() {
       {DesignPage && (
         <Route path="/design" element={<Suspense fallback={null}><DesignPage /></Suspense>} />
       )}
+      <Route path="/sites" element={<ProtectedRoute><Suspense fallback={null}><SitesPage /></Suspense></ProtectedRoute>} />
       <Route path="/" element={<RootRedirect />} />
       <Route path='/login' element={<Login />} />
       <Route path='/register' element={<Register />} />

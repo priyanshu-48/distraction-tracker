@@ -11,6 +11,6 @@ export interface NavItem {
 export const navItems: NavItem[] = [
   { to: "/today", label: "Today", icon: CalendarCheck, enabled: false },
   { to: "/trends", label: "Trends", icon: TrendingUp, enabled: false },
-  { to: "/sites", label: "Sites", icon: Globe, enabled: false },
+  { to: "/sites", label: "Sites", icon: Globe, enabled: true },
   { to: "/settings", label: "Settings", icon: Settings, enabled: false },
 ];

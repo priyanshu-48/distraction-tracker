@@ -9,7 +9,7 @@ function Sidebar() {
   const links = [
     { name: "Dashboard", to: "/" },
     { name: "Analytics", to: "/dashboard/analytics" },
-    { name: "Settings", to: "/settings" },
+    { name: "Sites", to: "/sites" },
   ];
 
   return (
