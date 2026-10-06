@@ -6,11 +6,11 @@ import { todayCount, todaySession } from "../models/analyticsModel.js";
 const router = express.Router();
 
 router.get("/today-count", authenticate, async (req, res) => {
-  res.json(await todayCount(req.user.id, getTimeZone(req)));
+  res.json(await todayCount(req.user.id, await getTimeZone(req)));
 });
 
 router.get("/today-session", authenticate, async (req, res) => {
-  res.json(await todaySession(req.user.id, getTimeZone(req)));
+  res.json(await todaySession(req.user.id, await getTimeZone(req)));
 });
 
 export default router;

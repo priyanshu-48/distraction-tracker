@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { normalizeDomain } from "../domain/sites.js";
 
 const isoTime = z.iso.datetime({ offset: true });
 
@@ -18,7 +19,8 @@ const intervalSchema = z
   .object({
     clientEventId: z.uuid(),
     url: z.url({ protocol: /^https?$/ }).max(2048),
-    domain: z.string().min(1).max(253),
+    // Lenient on purpose (a rejected batch is dropped by the extension), but always stored normalized.
+    domain: z.string().min(1).max(253).transform(normalizeDomain),
     title: z.string().max(512).optional().default(""),
     startedAt: isoTime,
     endedAt: isoTime,
@@ -33,4 +35,30 @@ const intervalSchema = z
 
 export const intervalsSchema = z.object({
   intervals: z.array(intervalSchema).min(1).max(50),
+});
+
+const LABEL = "[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?";
+const HOSTNAME = new RegExp(`^${LABEL}(?:\\.${LABEL})*$`);
+
+// A hostname typed by a user or taken from the URL path.
+const siteDomain = z
+  .string()
+  .trim()
+  .min(1)
+  .max(253)
+  // Dot-separated labels of 1-63 letters, digits or hyphens; a label cannot start or end with a hyphen.
+  .regex(HOSTNAME, "must be a hostname such as youtube.com")
+  .transform(normalizeDomain)
+  .refine((d) => d.length > 0, "must be a hostname such as youtube.com");
+
+export const siteParamsSchema = z.object({ domain: siteDomain });
+export const markSiteSchema = z.object({ marked: z.boolean() });
+
+export const listSitesQuerySchema = z.object({
+  days: z.enum(["7", "30", "90"]).default("7").transform(Number),
+  filter: z.enum(["all", "distractions", "unmarked"]).default("all"),
+  q: z.string().trim().max(100).default(""),
+  sort: z.enum(["time", "visits", "name"]).default("time"),
+  limit: z.coerce.number().int().min(1).max(100).default(25),
+  offset: z.coerce.number().int().min(0).default(0),
 });

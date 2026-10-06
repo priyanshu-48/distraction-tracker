@@ -1,7 +1,7 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import db from "../db.js";
 import { http, makeUser } from "./helpers.js";
-import { getTimeZone } from "../validation/timezone.js";
+import { clearTimeZoneCache, getTimeZone } from "../validation/timezone.js";
 
 // Independent of the SQL: find the first instant of "today" in a zone by stepping back minute by minute.
 const localDate = (ms, tz) => new Intl.DateTimeFormat("en-CA", { timeZone: tz }).format(ms);
@@ -116,10 +116,35 @@ describe("empty and invalid input", () => {
 });
 
 describe("getTimeZone", () => {
-  it("accepts real zones and falls back to UTC otherwise", () => {
-    expect(getTimeZone({ query: { tz: "Asia/Kolkata" } })).toBe("Asia/Kolkata");
-    expect(getTimeZone({ query: { tz: "Not/AZone" } })).toBe("UTC");
-    expect(getTimeZone({ query: {} })).toBe("UTC");
-    expect(getTimeZone({ query: { tz: ["a", "b"] } })).toBe("UTC");
+  beforeEach(() => clearTimeZoneCache());
+  afterEach(() => vi.restoreAllMocks());
+
+  it("accepts real zones and falls back to UTC otherwise", async () => {
+    expect(await getTimeZone({ query: { tz: "Asia/Kolkata" } })).toBe("Asia/Kolkata");
+    expect(await getTimeZone({ query: { tz: "Not/AZone" } })).toBe("UTC");
+    expect(await getTimeZone({ query: {} })).toBe("UTC");
+    expect(await getTimeZone({ query: { tz: ["a", "b"] } })).toBe("UTC");
+  });
+
+  // Browsers report "Asia/Calcutta"; Postgres images built on newer tzdata only know "Asia/Kolkata".
+  const postgresKnowing = (...known) =>
+    vi.spyOn(db, "query").mockImplementation(async (_sql, [name]) => ({ rowCount: known.includes(name) ? 1 : 0 }));
+
+  it("uses the name as sent when Postgres knows it", async () => {
+    postgresKnowing("Asia/Calcutta", "Asia/Kolkata");
+    expect(await getTimeZone({ query: { tz: "Asia/Calcutta" } })).toBe("Asia/Calcutta");
+  });
+
+  it("maps a legacy name to its current name when Postgres has dropped the old one", async () => {
+    postgresKnowing("Asia/Kolkata");
+    expect(await getTimeZone({ query: { tz: "Asia/Calcutta" } })).toBe("Asia/Kolkata");
+    expect(await getTimeZone({ query: { tz: "Europe/Kiev" } })).toBe("UTC"); // alias target missing too
+  });
+
+  it("asks Postgres once per name", async () => {
+    const spy = postgresKnowing("Asia/Kolkata");
+    await getTimeZone({ query: { tz: "Asia/Kolkata" } });
+    await getTimeZone({ query: { tz: "Asia/Kolkata" } });
+    expect(spy).toHaveBeenCalledTimes(1);
   });
 });

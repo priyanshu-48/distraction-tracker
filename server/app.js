@@ -9,7 +9,7 @@ import healthRoute from "./routes/healthRoute.js";
 import tabRoute from "./routes/tabRoute.js";
 import trackingRoute from "./routes/trackingRoute.js";
 import authRoutes from "./routes/authRoute.js";
-import siteAddRoute from './routes/siteAddRoute.js';
+import siteRoute from './routes/siteRoute.js';
 import analyticsRoute from './routes/analyticsRoute.js';
 import statBlockRoute from './routes/statBlockRoute.js';
 
@@ -44,7 +44,7 @@ app.use(healthRoute);
 app.use("/api",tabRoute);
 app.use("/api",trackingRoute);
 app.use("/api/auth",authRoutes);
-app.use("/api",siteAddRoute);
+app.use("/api",siteRoute);
 app.use("/api/analytics",analyticsRoute);
 app.use("/api/analytics",statBlockRoute);
 
