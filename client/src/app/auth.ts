@@ -2,10 +2,10 @@ import type { QueryClient } from "@tanstack/react-query";
 import api from "@/api";
 import { forgetAccount, syncToken } from "@/lib/extension";
 
-/** Where a signed-in user lands. Points at the old dashboard until the new Today screen replaces it. */
-export const HOME_PATH = "/dashboard";
-/** First-run checklist, where a new account lands. */
-export const SETUP_PATH = "/setup";
+/** Where a signed-in user lands: the one dashboard page. */
+export const HOME_PATH = "/";
+/** Where a new account lands: the same page, which shows the setup banner until setup is done. */
+export const SETUP_PATH = "/";
 
 export const getToken = (): string | null => localStorage.getItem("token");
 

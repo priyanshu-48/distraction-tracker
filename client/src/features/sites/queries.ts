@@ -1,4 +1,4 @@
-import { keepPreviousData, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { keepPreviousData, useMutation, useQuery, useQueryClient, type Query } from "@tanstack/react-query";
 import api from "@/api";
 import type { SitesParams, SitesResponse } from "./types";
 
@@ -15,7 +15,9 @@ async function putMarked(domain: string, marked: boolean) {
 }
 
 /** The user's sites for a window and filter. The previous page stays on screen while the next loads. */
-export function useSites(params: SitesParams, options: { refetchInterval?: number } = {}) {
+type PollInterval = number | false | ((query: Query<SitesResponse>) => number | false | undefined);
+
+export function useSites(params: SitesParams, options: { refetchInterval?: PollInterval } = {}) {
   return useQuery({
     queryKey: [...SITES_KEY, params],
     queryFn: () => fetchSites(params),

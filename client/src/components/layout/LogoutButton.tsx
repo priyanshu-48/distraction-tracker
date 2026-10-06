@@ -24,7 +24,7 @@ export function LogoutButton() {
       }}
     >
       <LogOut aria-hidden="true" className="size-4" />
-      <span className="max-sm:sr-only">Log out</span>
+      Log out
     </Button>
   );
 }

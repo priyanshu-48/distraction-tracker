@@ -28,7 +28,7 @@ describe("computeSteps", () => {
     ]);
   });
 
-  it.each([{ kind: "not-found" }, { kind: "unconfigured" }, { kind: "unsupported" }] as ExtensionState[])(
+  it.each([{ kind: "not-found" }, { kind: "outdated" }, { kind: "unconfigured" }, { kind: "unsupported" }] as ExtensionState[])(
     "keeps the user on install when the extension is %o",
     (extension) => {
       expect(statuses({ extension, tracking: false, hasVisits: false })[0]).toBe("install:current");

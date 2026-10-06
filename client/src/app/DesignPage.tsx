@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Inbox, Play } from "lucide-react";
-import { AppShell } from "@/components/layout/AppShell";
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
@@ -42,14 +42,14 @@ export default function DesignPage() {
   const [track, setTrack] = useState(true);
 
   return (
-    <AppShell
-      title="Design system"
-      actions={
+    <TooltipProvider>
+    <div className="app-dark min-h-dvh px-4 py-6 md:px-8">
+      <header className="mb-8 flex items-center justify-between gap-4">
+        <h1 className="text-xl font-semibold tracking-tight">Design system</h1>
         <Button>
           <Play aria-hidden="true" className="size-4" /> Start session
         </Button>
-      }
-    >
+      </header>
       <Section title="Colour (contrast of each colour as text on a card)">
         <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
           {swatches.map(({ name, hex, note }) => {
@@ -148,6 +148,7 @@ export default function DesignPage() {
           <ErrorState onRetry={() => undefined} />
         </div>
       </Section>
-    </AppShell>
+    </div>
+    </TooltipProvider>
   );
 }

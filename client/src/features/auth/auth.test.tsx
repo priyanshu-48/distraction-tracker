@@ -19,8 +19,7 @@ function renderAt(path: string) {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
-        <Route path="/dashboard" element={<p>old dashboard</p>} />
-        <Route path="/setup" element={<p>setup page</p>} />
+        <Route path="/" element={<p>home</p>} />
       </Routes>
     </MemoryRouter>
   );
@@ -80,7 +79,7 @@ describe("LoginPage", () => {
     expect(screen.getAllByRole("button", { name: /show password/i })).toHaveLength(1);
   });
 
-  it("signs in, stores the token and goes to the dashboard", async () => {
+  it("signs in, stores the token and goes home", async () => {
     const user = userEvent.setup();
     apiPost.mockResolvedValue({ data: { token: "tok", user: { id: 1, email: "a@b.co" } } });
     renderAt("/login");
@@ -88,7 +87,7 @@ describe("LoginPage", () => {
     await user.type(screen.getByLabelText("Password", { selector: "input" }), "password123");
     await user.click(screen.getByRole("button", { name: "Sign in" }));
 
-    expect(await screen.findByText("old dashboard")).toBeTruthy();
+    expect(await screen.findByText("home")).toBeTruthy();
     expect(apiPost).toHaveBeenCalledWith("/auth/login", { email: "a@b.co", password: "password123" });
     expect(localStorage.getItem("token")).toBe("tok");
   });
@@ -137,7 +136,7 @@ describe("LoginPage", () => {
   it("skips the form when already signed in", () => {
     localStorage.setItem("token", "tok");
     renderAt("/login");
-    expect(screen.getByText("old dashboard")).toBeTruthy();
+    expect(screen.getByText("home")).toBeTruthy();
   });
 });
 
@@ -172,7 +171,7 @@ describe("RegisterPage", () => {
     expect(apiPost).not.toHaveBeenCalled();
   });
 
-  it("creates the account, signs in and goes to the setup checklist", async () => {
+  it("creates the account, signs in and goes home (where the setup banner shows)", async () => {
     const user = userEvent.setup();
     apiPost.mockImplementation(async (url: string) =>
       url === "/auth/login" ? { data: { token: "tok", user: { id: 2, email: "new@b.co" } } } : { data: {} }
@@ -181,7 +180,7 @@ describe("RegisterPage", () => {
     await fill(user, "new@b.co", "password123", "password123");
     await user.click(screen.getByRole("button", { name: "Create account" }));
 
-    expect(await screen.findByText("setup page")).toBeTruthy();
+    expect(await screen.findByText("home")).toBeTruthy();
     expect(apiPost.mock.calls.map((call) => call[0])).toEqual(["/auth/register", "/auth/login"]);
     expect(localStorage.getItem("token")).toBe("tok");
   });
