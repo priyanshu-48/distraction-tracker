@@ -50,6 +50,8 @@ export function useDashboardState() {
     setView: (view: View) => write({ period: changeView(period, view, today) }),
     shift: (direction: -1 | 1) => write({ period: shiftPeriod(period, direction, today) }),
     goToday: () => write({ period: { view: period.view, date: today } }),
+    /** Switches to the Day view for one date (a bar in the week or month). */
+    openDay: (date: string) => write({ period: normalizePeriod({ view: "day", date }, today) }),
     openPanel: (name: Panel) => write({ panel: name }),
     closePanel: () => write({ panel: null }),
   };

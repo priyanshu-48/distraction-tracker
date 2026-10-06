@@ -43,13 +43,13 @@ export function usualLine(summary: Pick<DaySummary, "date" | "totals" | "usual">
 /** Under this a difference is noise, not "more" or "less". */
 const NOTICEABLE_SECONDS = 60;
 
-/** "▲ 20m vs usual" for one site, or null when there is no history or the difference is under a minute. */
-export function siteDelta(seconds: number, usualSeconds: number | null): { text: string; spoken: string; more: boolean } | null {
+/** "▲ 20m vs usual" (or vs whatever `against` names) for one site, or null when there is no history or the difference is under a minute. */
+export function siteDelta(seconds: number, usualSeconds: number | null, against = "usual"): { text: string; spoken: string; more: boolean } | null {
   if (usualSeconds === null) return null;
   const diff = seconds - usualSeconds;
   if (Math.abs(diff) < NOTICEABLE_SECONDS) return null;
   const amount = formatDurationCoarse(Math.abs(diff));
   return diff > 0
-    ? { text: `▲ ${amount} vs usual`, spoken: `${amount} more than usual`, more: true }
-    : { text: `▼ ${amount} vs usual`, spoken: `${amount} less than usual`, more: false };
+    ? { text: `▲ ${amount} vs ${against}`, spoken: `${amount} more than ${against}`, more: true }
+    : { text: `▼ ${amount} vs ${against}`, spoken: `${amount} less than ${against}`, more: false };
 }

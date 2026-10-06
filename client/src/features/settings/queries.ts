@@ -22,7 +22,7 @@ export function useSaveBudget() {
       (await api.put<SettingsResponse>("/settings", { dailyBudgetSeconds })).data.dailyBudgetSeconds,
     onSuccess: (seconds) => {
       queryClient.setQueryData(BUDGET_KEY, seconds);
-      return queryClient.invalidateQueries({ queryKey: ["summary"] });
+      return Promise.all([queryClient.invalidateQueries({ queryKey: ["summary"] }), queryClient.invalidateQueries({ queryKey: ["range"] })]);
     },
   });
 }

@@ -12,8 +12,10 @@ describe("formatDuration", () => {
     [4320, "1h 12m"],
     [7200, "2h"],
     [7260, "2h 1m"],
-    [86400, "1d"],
-    [93600, "1d 2h"],
+    [86400, "24h"],
+    [93600, "26h"],
+    [119100, "33h 5m"],
+    [360000, "100h"],
   ])("%s seconds -> %s", (seconds, expected) => {
     expect(formatDuration(seconds)).toBe(expected);
   });

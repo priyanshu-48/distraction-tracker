@@ -1,20 +1,19 @@
 import { formatShortDay, todayIn } from "./period";
 
 /**
- * Formats a length of time using its two largest units: "1h 12m", "12m 30s", "45s".
+ * Formats a length of time using its two largest units: "1h 12m", "12m 30s", "45s". Hours do not roll over into
+ * days: a month of distractions is "33h 5m", which reads as time, where "1d 9h" reads like days.
  * Zero units are dropped ("2h", "12m"). Bad input (negative, NaN) renders as "0s".
  * Every duration in the UI goes through this, so units never differ between screens.
  */
 export function formatDuration(totalSeconds: number): string {
   const total = Number.isFinite(totalSeconds) ? Math.max(0, Math.round(totalSeconds)) : 0;
-  const days = Math.floor(total / 86400);
-  const hours = Math.floor((total % 86400) / 3600);
+  const hours = Math.floor(total / 3600);
   const minutes = Math.floor((total % 3600) / 60);
   const seconds = total % 60;
 
   const parts: Array<[number, string]> =
-    days > 0 ? [[days, "d"], [hours, "h"]]
-    : hours > 0 ? [[hours, "h"], [minutes, "m"]]
+    hours > 0 ? [[hours, "h"], [minutes, "m"]]
     : minutes > 0 ? [[minutes, "m"], [seconds, "s"]]
     : [[seconds, "s"]];
 

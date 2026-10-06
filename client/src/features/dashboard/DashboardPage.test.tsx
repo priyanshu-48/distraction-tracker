@@ -18,10 +18,26 @@ const world = vi.hoisted(() => ({
 
 vi.mock("@/api", () => ({
   default: {
-    get: vi.fn(async (url: string) => {
+    get: vi.fn(async (url: string, config?: { params?: { view?: string; date?: string } }) => {
       if (url === "/is-tracking") return { data: { isTracking: world.tracking } };
       if (url === "/sites") return { data: { days: 90, total: world.totalVisits, sites: [] } };
       if (url === "/settings") return { data: { dailyBudgetSeconds: 7200 } };
+      // A week with a little tracked on Wednesday 16 September and nothing else.
+      if (url === "/range") {
+        const days = ["14", "15", "16", "17", "18", "19", "20"].map((d) => ({
+          date: `2026-09-${d}`, distractedSeconds: d === "16" ? 900 : 0, trackedSeconds: d === "16" ? 1800 : 0, visits: d === "16" ? 3 : 0,
+          firstDistractionAfterSeconds: null,
+        }));
+        return {
+          data: {
+            view: config?.params?.view, start: "2026-09-14", end: "2026-09-20", through: "2026-09-20", timeZone: "UTC", budgetSeconds: 7200,
+            days,
+            totals: { distractedSeconds: 900, trackedSeconds: 1800, visits: 3, daysTracked: 1, daysUnderBudget: 1, avgDistractedSeconds: 900 },
+            previous: { start: "2026-09-07", end: "2026-09-13", distractedSeconds: 0, trackedSeconds: 0, visits: 0, daysTracked: 0 },
+            best: null, worst: null, streak: { current: 0, longest: 1 }, topSites: [], movers: { up: [], down: [] }, heatmap: [],
+          },
+        };
+      }
       // An untracked day: the page shows its empty state, which is all these tests need from the Day view.
       if (url === "/summary") {
         return {
@@ -112,6 +128,33 @@ describe("period navigation", () => {
 
     await user.click(screen.getByRole("radio", { name: "Month" }));
     expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("September 2026");
+  });
+
+  it("shows the week view, and a bar opens that day", async () => {
+    const user = userEvent.setup();
+    renderAt("/?view=week&date=2026-09-20");
+    await user.click(await screen.findByRole("button", { name: "Wed, 16 Sep: 15m of distractions" }));
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Wed, 16 Sep");
+    expect(screen.getByTestId("search").textContent).toBe("?date=2026-09-16");
+    expect(screen.getByRole("radio", { name: "Day" }).getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("shows the month view with the month's name, and a bar opens that day", async () => {
+    const user = userEvent.setup();
+    renderAt("/?view=month&date=2026-09-20");
+    expect(await screen.findByText("September 2026 · 1 day tracked")).toBeTruthy();
+    await user.click(await screen.findByRole("button", { name: "Wed, 16 Sep: 15m of distractions" }));
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toBe("Wed, 16 Sep");
+    expect(screen.getByRole("radio", { name: "Day" }).getAttribute("aria-checked")).toBe("true");
+  });
+
+  it("asks for a month when the month tab is chosen", async () => {
+    const user = userEvent.setup();
+    renderAt();
+    await user.click(screen.getByRole("radio", { name: "Month" }));
+    await screen.findByText(/days? tracked/);
+    const { default: api } = await import("@/api");
+    expect(api.get).toHaveBeenCalledWith("/range", { params: { view: "month", date: "2026-10-05" } });
   });
 
   it("opens straight onto a period given in the URL", () => {

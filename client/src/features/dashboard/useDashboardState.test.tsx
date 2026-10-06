@@ -76,6 +76,26 @@ describe("useDashboardState", () => {
     expect(result.current.location.search).toBe("");
   });
 
+  it("opens one day from a week, keeping nothing of the week in the URL", () => {
+    const { result } = setup("/?view=week&date=2026-09-20");
+    act(() => result.current.state.openDay("2026-09-16"));
+    expect(result.current.state.period).toEqual({ view: "day", date: "2026-09-16" });
+    expect(result.current.location.search).toBe("?date=2026-09-16");
+  });
+
+  it("opening today from a week gives the bare URL", () => {
+    const { result } = setup("/?view=week");
+    act(() => result.current.state.openDay("2026-10-05"));
+    expect(result.current.location.search).toBe("");
+  });
+
+  it("pulls a date outside the history or in the future back into range when opening a day", () => {
+    const { result } = setup("/?view=week");
+    act(() => result.current.state.openDay("2026-10-09"));
+    expect(result.current.state.period.date).toBe("2026-10-05");
+    expect(result.current.location.search).toBe(""); // the URL itself is clean, not just the value read back from it
+  });
+
   it("opens and closes a panel without losing the period", () => {
     const { result } = setup("/?view=week&date=2026-09-20");
     act(() => result.current.state.openPanel("settings"));

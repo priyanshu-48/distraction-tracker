@@ -50,6 +50,7 @@ export function useMarkSite() {
       Promise.all([
         queryClient.invalidateQueries({ queryKey: SITES_KEY }),
         queryClient.invalidateQueries({ queryKey: ["summary"] }),
+        queryClient.invalidateQueries({ queryKey: ["range"] }),
       ]),
   });
 }

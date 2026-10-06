@@ -48,6 +48,13 @@ describe("usualLine for a day in progress, with a pace", () => {
   });
 });
 
+describe("siteDelta against something other than usual", () => {
+  it("names what it is compared with", () => {
+    expect(siteDelta(1800, 600, "last week")).toEqual({ text: "▲ 20m vs last week", spoken: "20m more than last week", more: true });
+    expect(siteDelta(600, 1800, "last month")?.spoken).toBe("20m less than last month");
+  });
+});
+
 describe("siteDelta", () => {
   it("has nothing to say without history", () => {
     expect(siteDelta(1200, null)).toBeNull();
