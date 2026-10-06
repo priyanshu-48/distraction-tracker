@@ -2,10 +2,7 @@ import db from "../db.js";
 import { buildTimeline, summarizeDay, usualBaseline } from "../domain/daySummary.js";
 import { addDays, timeOfDayIn, todayIn } from "../domain/dates.js";
 import { getDailyBudget } from "./settingsModel.js";
-
-// "date" is a plain calendar date; the day runs from local midnight to the next local midnight in `tz`.
-const dayStart = (date, tz) => `(${date}::date::timestamp AT TIME ZONE ${tz}::text)`;
-const dayEnd = (date, tz) => `((${date}::date + 1)::timestamp AT TIME ZONE ${tz}::text)`;
+import { dayEnd, dayStart } from "./timeSql.js";
 
 /** How many earlier same-weekday days make up "your usual". */
 const USUAL_WEEKS = 4;

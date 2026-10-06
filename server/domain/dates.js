@@ -15,6 +15,34 @@ export function isCalendarDate(value) {
 
 export const addDays = (date, days) => format(parse(date) + days * DAY_MS);
 
+/** Whole days from `from` to `to` (both "YYYY-MM-DD"); negative if `to` is earlier. */
+export const daysBetween = (from, to) => Math.round((parse(to) - parse(from)) / DAY_MS);
+
+export const VIEWS = ["day", "week", "month"];
+
+/** First and last day (inclusive) of the day, Monday-to-Sunday week or calendar month that contains `date`. */
+export function periodBounds(view, date) {
+  if (view === "day") return { start: date, end: date };
+  const ms = parse(date);
+  if (view === "week") {
+    const sinceMonday = (new Date(ms).getUTCDay() + 6) % 7;
+    const start = ms - sinceMonday * DAY_MS;
+    return { start: format(start), end: format(start + 6 * DAY_MS) };
+  }
+  const d = new Date(ms);
+  return {
+    start: format(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), 1)),
+    end: format(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)),
+  };
+}
+
+/** The period just before the one starting at `start`: the previous week, or the previous calendar month. */
+export function previousPeriod(view, start) {
+  if (view === "day") return { start: addDays(start, -1), end: addDays(start, -1) };
+  if (view === "week") return { start: addDays(start, -7), end: addDays(start, -1) };
+  return periodBounds("month", addDays(start, -1));
+}
+
 /** Today's date in the given IANA zone. */
 export function todayIn(timeZone, now = new Date()) {
   return new Intl.DateTimeFormat("en-CA", { timeZone, year: "numeric", month: "2-digit", day: "2-digit" }).format(now);
