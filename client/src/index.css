@@ -1,5 +1,8 @@
 @import "tailwindcss";
+@import "@fontsource-variable/inter";
+
 @theme {
+    /* Legacy tokens, used by the screens that have not been rewritten yet. */
     --color-violet:#8b5cf6;
     --color-blue-violet:#743DF5;
     --color-navy-blue: #17255a;
@@ -8,4 +11,34 @@
     --color-eerie-black: #1b1b1b;
     --color-grey:#F1F1F1;
     --color-dark-grey:#E0E0E0;
+
+    /* New UI ("Navy Diary"). Surface and accent colours were sampled from the reference
+       screenshots; muted text was lightened to reach 4.5:1 on cards (measured 4.09 -> 5.28). */
+    --color-page: #101123;
+    --color-card: #28293b;
+    --color-raised: #404251;
+    --color-ink: #fcffff;
+    --color-ink-muted: #9b9cae;
+    --color-coral: #ff7c50;
+    --color-coral-ink: #101123; /* text on coral: white is only 2.53:1, this is 7.32:1 */
+    --color-teal: #47d1dc;
+    --color-purple: #be78ce;
+    --color-green: #6ad591;
+    --color-pink: #e286c9;
+
+    --font-ui: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --radius-card: 1.25rem;
+}
+
+/* Everything in the new UI lives under .app-dark so the old pages are unaffected. */
+.app-dark {
+    background: var(--color-page);
+    color: var(--color-ink);
+    color-scheme: dark;
+    font-family: var(--font-ui);
+    font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .app-dark * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
