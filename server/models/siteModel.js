@@ -18,11 +18,17 @@ export async function listSites(userId, { days, tz, filter, q, sort, limit, offs
     `WITH win AS (
        SELECT ((date_trunc('day', NOW() AT TIME ZONE $2::text) - ($3::int - 1) * INTERVAL '1 day') AT TIME ZONE $2::text) AS s
      ),
-     usage AS (
+     raw AS (
        SELECT domain, SUM(duration) AS seconds, COUNT(*) AS visits, MAX(started_at) AS last_seen
        FROM tab_activity, win
        WHERE user_id = $1 AND started_at >= win.s
        GROUP BY domain
+     ),
+     -- grouped after the per-domain totals, so site_key() runs once per domain and not once per visit
+     usage AS (
+       SELECT site_key(domain) AS domain, SUM(seconds) AS seconds, SUM(visits) AS visits, MAX(last_seen) AS last_seen
+       FROM raw
+       GROUP BY site_key(domain)
      ),
      merged AS (
        SELECT COALESCE(u.domain, m.domain) AS domain,
@@ -58,14 +64,20 @@ export async function listSites(userId, { days, tz, filter, q, sort, limit, offs
   return { days, total: result.rows.length ? Number(result.rows[0].total) : 0, sites };
 }
 
-/** Marks or unmarks a site as a distraction. Idempotent. */
+/**
+ * Marks or unmarks a site as a distraction. Idempotent. The mark belongs to the whole group the domain is in
+ * (m.youtube.com marks youtube.com; see migration 007), and the group's name is returned.
+ */
 export async function setMarked(userId, domain, marked) {
+  const { rows } = await db.query("SELECT site_key($1) AS key", [domain]);
+  const key = rows[0].key;
   if (marked) {
     await db.query(
       "INSERT INTO distraction_sites (user_id, domain) VALUES ($1, $2) ON CONFLICT (user_id, domain) DO NOTHING",
-      [userId, domain]
+      [userId, key]
     );
   } else {
-    await db.query("DELETE FROM distraction_sites WHERE user_id = $1 AND domain = $2", [userId, domain]);
+    await db.query("DELETE FROM distraction_sites WHERE user_id = $1 AND domain = $2", [userId, key]);
   }
+  return key;
 }

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { normalizeDomain } from "../domain/sites.js";
+import { isCalendarDate } from "../domain/dates.js";
 
 const isoTime = z.iso.datetime({ offset: true });
 
@@ -61,4 +62,13 @@ export const listSitesQuerySchema = z.object({
   sort: z.enum(["time", "visits", "name"]).default("time"),
   limit: z.coerce.number().int().min(1).max(100).default(25),
   offset: z.coerce.number().int().min(0).default(0),
+});
+
+export const summaryQuerySchema = z.object({
+  date: z.string().refine(isCalendarDate, "must be a date such as 2026-10-05"),
+});
+
+// 5 minutes to 24 hours, whole seconds (the database enforces the same range).
+export const settingsSchema = z.object({
+  dailyBudgetSeconds: z.number().int().min(300).max(86_400),
 });

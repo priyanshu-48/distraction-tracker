@@ -8,6 +8,5 @@ export async function listSites(req, res) {
 export async function markSite(req, res) {
   const { domain } = req.validated.params;
   const { marked } = req.body;
-  await sites.setMarked(req.user.id, domain, marked);
-  res.json({ domain, marked });
+  res.json({ domain: await sites.setMarked(req.user.id, domain, marked), marked });
 }

@@ -10,6 +10,8 @@ import tabRoute from "./routes/tabRoute.js";
 import trackingRoute from "./routes/trackingRoute.js";
 import authRoutes from "./routes/authRoute.js";
 import siteRoute from './routes/siteRoute.js';
+import settingsRoute from './routes/settingsRoute.js';
+import summaryRoute from './routes/summaryRoute.js';
 import analyticsRoute from './routes/analyticsRoute.js';
 import statBlockRoute from './routes/statBlockRoute.js';
 
@@ -45,6 +47,8 @@ app.use("/api",tabRoute);
 app.use("/api",trackingRoute);
 app.use("/api/auth",authRoutes);
 app.use("/api",siteRoute);
+app.use("/api",settingsRoute);
+app.use("/api",summaryRoute);
 app.use("/api/analytics",analyticsRoute);
 app.use("/api/analytics",statBlockRoute);
 
