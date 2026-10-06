@@ -23,6 +23,8 @@ export type ExtensionState =
   | { kind: "unsupported" }
   /** No answer: not installed, disabled, a different ID, or installed in another browser. */
   | { kind: "not-found" }
+  /** The extension is there and listening but too old to report its status: it needs a reload. */
+  | { kind: "outdated" }
   | { kind: "connected"; report: ExtensionReport };
 
 interface ChromeRuntime {
@@ -33,27 +35,36 @@ interface ChromeRuntime {
 const extensionId = (): string | undefined => import.meta.env.VITE_EXTENSION_ID || undefined;
 const runtime = (): ChromeRuntime | undefined => (window as { chrome?: { runtime?: ChromeRuntime } }).chrome?.runtime;
 
-/** Sends one message and resolves with the reply, or null if nobody answered. */
-function send(message: { type: string; [key: string]: unknown }): Promise<unknown> {
+interface Reply {
+  /** What the extension answered, or null if it did not. */
+  response: unknown;
+  /** Why there was no answer, as Chrome words it (null when there was one, or nothing was sent). */
+  error: string | null;
+}
+
+/** Sends one message and resolves with the reply; never throws. */
+function send(message: { type: string; [key: string]: unknown }): Promise<Reply> {
   return new Promise((resolve) => {
     const id = extensionId();
     const rt = runtime();
-    if (!id || !rt?.sendMessage) return resolve(null);
+    if (!id || !rt?.sendMessage) return resolve({ response: null, error: null });
     try {
       rt.sendMessage(id, message, (response) => {
         // Reading lastError marks it handled, which stops "Unchecked runtime.lastError" console noise.
-        resolve(rt.lastError || response === undefined ? null : response);
+        const lastError = rt.lastError as { message?: string } | undefined;
+        if (lastError) return resolve({ response: null, error: lastError.message ?? "unknown error" });
+        resolve({ response: response === undefined ? null : response, error: null });
       });
-    } catch {
-      resolve(null);
+    } catch (error) {
+      resolve({ response: null, error: error instanceof Error ? error.message : String(error) });
     }
   });
 }
 
 /** Gives the extension the login token. True if it accepted it. */
 export async function syncToken(token: string): Promise<boolean> {
-  const reply = (await send({ type: "SET_TOKEN", token })) as { status?: string } | null;
-  return reply?.status === "ok";
+  const { response } = await send({ type: "SET_TOKEN", token });
+  return (response as { status?: string } | null)?.status === "ok";
 }
 
 /** Tells the extension to upload what it has and forget the account (dashboard logout). */
@@ -65,6 +76,10 @@ export async function forgetAccount(): Promise<void> {
 export async function checkExtension(): Promise<ExtensionState> {
   if (!extensionId()) return { kind: "unconfigured" };
   if (!runtime()?.sendMessage) return { kind: "unsupported" };
-  const reply = (await send({ type: "PING" })) as ExtensionReport | null;
-  return reply?.status === "ok" ? { kind: "connected", report: reply } : { kind: "not-found" };
+  const { response, error } = await send({ type: "PING" });
+  if ((response as ExtensionReport | null)?.status === "ok") return { kind: "connected", report: response as ExtensionReport };
+  // An extension that listens but does not know PING closes the channel without a reply, which Chrome words
+  // differently from "nobody is there". That means an older version is running: it needs a reload.
+  if (error && /message port closed/i.test(error)) return { kind: "outdated" };
+  return { kind: "not-found" };
 }

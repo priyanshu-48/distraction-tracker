@@ -42,3 +42,8 @@
 @media (prefers-reduced-motion: reduce) {
     .app-dark * { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
 }
+
+@keyframes sheet-in {
+    from { transform: translateX(2rem); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+}

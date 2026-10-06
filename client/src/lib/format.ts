@@ -1,3 +1,5 @@
+import { formatShortDay, todayIn } from "./period";
+
 /**
  * Formats a length of time using its two largest units: "1h 12m", "12m 30s", "45s".
  * Zero units are dropped ("2h", "12m"). Bad input (negative, NaN) renders as "0s".
@@ -33,14 +35,7 @@ export function siteLabel(domain: string): string {
 
 /** "Mon, 5 Oct" in the given IANA time zone (defaults to the browser's). */
 export function formatDayHeading(date: Date, timeZone?: string): string {
-  return new Intl.DateTimeFormat("en-GB", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    timeZone,
-  })
-    .format(date)
-    .replace(/^(\w+) /, "$1, ");
+  return formatShortDay(todayIn(timeZone, date));
 }
 
 /** "just now", "5 min ago", "3 h ago", or a short date once it is older than a day. */

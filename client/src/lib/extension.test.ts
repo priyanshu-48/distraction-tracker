@@ -52,6 +52,15 @@ describe("checkExtension", () => {
     expect(await checkExtension()).toEqual({ kind: "not-found" });
   });
 
+  it("tells an outdated extension apart from a missing one", async () => {
+    // An extension that listens but does not know PING closes the channel without replying.
+    fakeChrome({ PING: { lastError: { message: "The message port closed before a response was received." } } });
+    expect(await checkExtension()).toEqual({ kind: "outdated" });
+    // Nobody there (not installed, disabled, wrong ID) is worded differently by Chrome.
+    fakeChrome({ PING: { lastError: { message: "Could not establish connection. Receiving end does not exist." } } });
+    expect(await checkExtension()).toEqual({ kind: "not-found" });
+  });
+
   it("reports not-found when sending throws", async () => {
     fakeChrome({ PING: { throws: true } });
     expect(await checkExtension()).toEqual({ kind: "not-found" });
