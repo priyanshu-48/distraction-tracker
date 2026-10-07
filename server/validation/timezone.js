@@ -34,7 +34,11 @@ async function postgresKnows(name) {
  * because it means that user's "today" quietly follows UTC instead of their own midnight.
  */
 export async function getTimeZone(req) {
-  const tz = req.query.tz;
+  return resolveTimeZone(req.query.tz);
+}
+
+/** The same rules for a zone name that did not come from ?tz= (for example one a user saved in Settings). */
+export async function resolveTimeZone(tz) {
   if (typeof tz !== "string") return "UTC";
   try {
     new Intl.DateTimeFormat("en", { timeZone: tz });
