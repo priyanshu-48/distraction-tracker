@@ -166,4 +166,4 @@ docs/        Benchmarks and screenshots
 
 ## License
 
-Distributed under the MIT License.
+Distributed under the [MIT License](LICENSE).
