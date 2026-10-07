@@ -160,7 +160,7 @@ By default everything stays on your machine and in your own database. The extens
 - The production client build takes about five minutes; the cause is not yet found.
 - Each of the 31 bars in the Month view is narrow on a phone; the Day view's date stepper is the fallback.
 - The server still contains the original `/api/analytics` endpoints, which the dashboard no longer calls.
-- Budget alerts appear as Chrome notifications within about 30 seconds (the extension's poll interval). The weekly summary, streak alerts and a live list of alerts in the dashboard are not built yet. Alerts use a hosted notification service; deleting your account here does not yet delete what that service holds. Clicking a notification does nothing yet.
+- Budget alerts appear as Chrome notifications within about 30 seconds (the extension's poll interval); this was checked in a real Chrome with the unpacked extension. The weekly summary, streak alerts and a live list of alerts in the dashboard are not built yet. Alerts use a hosted notification service; deleting your account here does not yet delete what that service holds. Clicking a notification does nothing yet.
 
 ## Project structure
 

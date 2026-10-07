@@ -126,7 +126,7 @@ async function refreshTracking() {
   let tracking = false;
   if (token) {
     try {
-      const res = await fetch(`${API}/is-tracking`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API}/is-tracking?alerts=1`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.status === 401) await markLoggedOut();
       else if (res.ok) {
         const answer = await res.json();

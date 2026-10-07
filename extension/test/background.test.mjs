@@ -80,7 +80,7 @@ async function createWorld() {
   const server = { tracking: true, online: true, status: 200, uploads: [], rejected: 0, alerts: [] };
   globalThis.fetch = async (url, options = {}) => {
     if (!server.online) throw new TypeError("Failed to fetch");
-    if (url.endsWith("/is-tracking")) {
+    if (url.includes("/is-tracking")) {
       return {
         ok: server.status === 200,
         status: server.status,

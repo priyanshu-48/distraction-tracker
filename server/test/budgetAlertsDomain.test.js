@@ -28,7 +28,7 @@ describe("reachedBudgetLevel", () => {
 
 describe("formatDuration", () => {
   it.each([
-    [0, "0s"], [45, "45s"], [60, "1m"], [89, "1m"], [2400, "40m"], [3600, "1h"], [3900, "1h 5m"], [7200, "2h"], [7229, "2h"], [-5, "0s"],
+    [0, "0s"], [45, "45s"], [60, "1m"], [89, "1m"], [119, "1m"], [280, "4m"], [299, "4m"], [2400, "40m"], [3600, "1h"], [3900, "1h 5m"], [7200, "2h"], [7229, "2h"], [7259, "2h"], [-5, "0s"],
   ])("%s seconds -> %s", (seconds, expected) => {
     expect(formatDuration(seconds)).toBe(expected);
   });
