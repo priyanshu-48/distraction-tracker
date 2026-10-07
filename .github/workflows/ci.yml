@@ -43,7 +43,11 @@ jobs:
           cache: npm
           cache-dependency-path: server/package-lock.json
       - run: npm ci
-      - run: npm test
+      - run: npm run coverage # runs the tests and prints line/branch coverage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server-coverage
+          path: server/coverage/coverage-summary.json
 
   client:
     name: Client lint, typecheck, tests and build
@@ -61,7 +65,11 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run typecheck
-      - run: npm test
+      - run: npm run coverage # runs the tests and prints line/branch coverage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: client-coverage
+          path: client/coverage/coverage-summary.json
       - run: npm run build
 
   extension:

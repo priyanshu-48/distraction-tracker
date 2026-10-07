@@ -41,5 +41,12 @@ export default defineConfig(({ mode }) => ({
     environment: 'node',
     include: ['src/**/*.test.{ts,tsx}'],
     setupFiles: ['./src/test/setup.ts'],
+    coverage: {
+      provider: 'v8',
+      // All app code, including files no test imports. Left out: tests, the test setup, type declarations.
+      include: ['src/**/*.{ts,tsx,js,jsx}'],
+      exclude: ['src/**/*.test.{ts,tsx}', 'src/test/**', 'src/**/*.d.ts'],
+      reporter: ['text', 'json-summary'],
+    },
   },
 }))
