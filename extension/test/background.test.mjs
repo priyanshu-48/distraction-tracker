@@ -49,6 +49,8 @@ async function createWorld() {
   const session = area();
   const listeners = {};
   const event = (name) => ({ addListener: (fn) => (listeners[name] ??= []).push(fn) });
+  const shown = []; // every Chrome notification the extension asked for
+  const notifyBehavior = { fail: false };
   let activeTab;
   let idleState = "active";
   let windowFocused = true;
@@ -65,14 +67,25 @@ async function createWorld() {
     },
     windows: { onFocusChanged: event("focus"), WINDOW_ID_NONE: -1, getLastFocused: async () => ({ focused: windowFocused }) },
     alarms: { create() {}, onAlarm: event("alarm") },
-    runtime: { onMessageExternal: event("external"), getManifest: () => ({ version: "0.1.0" }) },
+    runtime: { onMessageExternal: event("external"), getManifest: () => ({ version: "0.1.0" }), getURL: (path) => `chrome-extension://test/${path}` },
+    notifications: {
+      create: async (id, options) => {
+        if (notifyBehavior.fail) throw new Error("notifications are blocked");
+        shown.push({ id, ...options });
+      },
+    },
   };
 
-  const server = { tracking: true, online: true, status: 200, uploads: [], rejected: 0 };
+  // `alerts` are handed over once, like the real server does: answering the poll empties them.
+  const server = { tracking: true, online: true, status: 200, uploads: [], rejected: 0, alerts: [] };
   globalThis.fetch = async (url, options = {}) => {
     if (!server.online) throw new TypeError("Failed to fetch");
     if (url.endsWith("/is-tracking")) {
-      return { ok: server.status === 200, status: server.status, json: async () => ({ isTracking: server.tracking }) };
+      return {
+        ok: server.status === 200,
+        status: server.status,
+        json: async () => ({ isTracking: server.tracking, ...(server.alerts.length ? { alerts: server.alerts.splice(0) } : {}) }),
+      };
     }
     if (url.endsWith("/intervals")) {
       if (server.status === 200) server.uploads.push(...JSON.parse(options.body).intervals);
@@ -88,6 +101,8 @@ async function createWorld() {
     local,
     session,
     server,
+    shown,
+    notifyBehavior,
     advance: (seconds) => void (clock.now += seconds * 1000),
     token: (id) => `h.${Buffer.from(JSON.stringify({ id })).toString("base64")}.s`,
     /** Switch to a tab, as if the user clicked it. */
@@ -584,5 +599,102 @@ describe("messages from the dashboard", () => {
     assert.equal(await world.message({ type: "SOMETHING_ELSE" }), undefined);
     assert.equal(await world.message({ type: "constructor" }), undefined);
     assert.equal(await world.message(undefined), undefined);
+  });
+});
+
+describe("budget alerts from the server", () => {
+  let world;
+  const alert = (id, over = {}) => ({ id, kind: "budget-warning", title: `Alert ${id}`, body: `Body ${id}`, ...over });
+  const poll = (w) => w.fire("alarm", { name: "poll" });
+
+  beforeEach(async () => {
+    world = await createWorld();
+    await world.local.set({ token: world.token(7) });
+  });
+
+  it("shows one Chrome notification per alert, with the server's title and text and the extension's icon", async () => {
+    world.server.alerts.push(alert(1, { title: "80% of today's distraction budget used", body: "youtube.com is your biggest distraction today: 40m." }));
+    await poll(world);
+    assert.deepEqual(world.shown, [
+      {
+        id: "dt-alert-1",
+        type: "basic",
+        iconUrl: "chrome-extension://test/assets/ext-icon.png",
+        title: "80% of today's distraction budget used",
+        message: "youtube.com is your biggest distraction today: 40m.",
+      },
+    ]);
+  });
+
+  it("shows each alert once: the next poll has nothing new", async () => {
+    world.server.alerts.push(alert(1));
+    await poll(world);
+    await poll(world);
+    assert.equal(world.shown.length, 1);
+  });
+
+  it("shows several in order, but never more than three at once", async () => {
+    world.server.alerts.push(...[1, 2, 3, 4, 5].map((id) => alert(id)));
+    await poll(world);
+    assert.deepEqual(world.shown.map((n) => n.id), ["dt-alert-1", "dt-alert-2", "dt-alert-3"]);
+  });
+
+  it("shows nothing when there are no alerts", async () => {
+    await poll(world);
+    assert.deepEqual(world.shown, []);
+  });
+
+  it("keeps tracking state correct while showing alerts", async () => {
+    world.server.tracking = true;
+    world.server.alerts.push(alert(1));
+    await poll(world);
+    assert.equal((await world.session.get("tracking")).tracking, true);
+  });
+
+  it("copes with malformed alerts without breaking the poll", async () => {
+    world.server.alerts.push({ id: 9 }, alert(10, { title: "x".repeat(500), body: "y".repeat(1000) }));
+    await poll(world);
+    assert.equal(world.shown.length, 2);
+    assert.equal(world.shown[0].title, "");
+    assert.equal(world.shown[1].title.length, 100);
+    assert.equal(world.shown[1].message.length, 300);
+    assert.equal((await world.session.get("tracking")).tracking, true);
+  });
+
+  it("is not stopped by Chrome refusing to show a notification", async () => {
+    world.notifyBehavior.fail = true;
+    world.server.alerts.push(alert(1), alert(2));
+    const realError = console.error;
+    const errors = [];
+    console.error = (...args) => errors.push(args.join(" "));
+    try {
+      await poll(world);
+    } finally {
+      console.error = realError;
+    }
+    assert.equal(errors.length, 2);
+    assert.equal((await world.session.get("tracking")).tracking, true);
+  });
+
+  it("works in a browser that has no notifications API", async () => {
+    delete globalThis.chrome.notifications;
+    world.server.alerts.push(alert(1));
+    await poll(world);
+    assert.equal((await world.session.get("tracking")).tracking, true);
+  });
+
+  it("shows nothing for a signed-out extension, which never asks the server", async () => {
+    await world.local.remove("token");
+    world.server.alerts.push(alert(1));
+    await poll(world);
+    assert.deepEqual(world.shown, []);
+    assert.equal(world.server.alerts.length, 1);
+  });
+
+  it("does not show alerts from an error answer", async () => {
+    world.server.alerts.push(alert(1));
+    world.server.status = 500;
+    await poll(world);
+    assert.deepEqual(world.shown, []);
   });
 });

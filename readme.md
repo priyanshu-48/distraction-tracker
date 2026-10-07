@@ -33,6 +33,7 @@
   - *What ate my time, and when?* Ranked sites with a "vs last week" change, a timeline of your sessions, and a weekday-by-hour heatmap.
   - *Is it a habit or a binge?* Many short visits are tagged as a checking habit, long ones as a binge.
   - *Am I getting better?* A like-for-like comparison with the previous period, streaks, and how soon after starting you slip.
+- **Optional budget alerts.** If the server is connected to a notification service and you switch it on in Settings, the extension shows a Chrome notification when you reach 80% of today's budget and when you pass it. Off by default; see [Privacy](#privacy).
 - **Your data is yours.** In Settings you can download everything as JSON (or just the visits as a CSV for a spreadsheet), delete your whole history, or delete your account. Deleting asks for your password.
 - **Works on a phone-sized screen**, and every chart has a text version for screen readers.
 
@@ -105,6 +106,8 @@ npm run dev                 # http://localhost:5173
 2. Copy the extension's ID from that page into `client/.env` as `VITE_EXTENSION_ID`, then restart `npm run dev`.
 3. Sign in on the dashboard. The setup banner confirms the extension is connected; press **Start session** and browse.
 
+The extension asks for the `notifications` permission so it can show budget alerts; it is only used if you switch alerts on in Settings (when updating an already loaded copy, reload it at `chrome://extensions`).
+
 The extension talks to `http://localhost:3000` and the dashboard to `http://localhost:5173`; both are fixed in `extension/manifest.json` and `extension/background.js`.
 
 ## API
@@ -157,7 +160,7 @@ By default everything stays on your machine and in your own database. The extens
 - The production client build takes about five minutes; the cause is not yet found.
 - Each of the 31 bars in the Month view is narrow on a phone; the Day view's date stepper is the fallback.
 - The server still contains the original `/api/analytics` endpoints, which the dashboard no longer calls.
-- Budget alerts are recorded and sent, but showing them as Chrome notifications and in the dashboard comes in a later change. They use a hosted notification service; deleting your account here does not yet delete what that service holds.
+- Budget alerts appear as Chrome notifications within about 30 seconds (the extension's poll interval). The weekly summary, streak alerts and a live list of alerts in the dashboard are not built yet. Alerts use a hosted notification service; deleting your account here does not yet delete what that service holds. Clicking a notification does nothing yet.
 
 ## Project structure
 
