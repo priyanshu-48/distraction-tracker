@@ -59,7 +59,7 @@ flowchart LR
   API --> DB[("PostgreSQL")]
 ```
 
-1. You sign in on the dashboard, which hands the login token to the extension.
+1. You sign in on the dashboard, which hands the extension its own limited token (it can upload visits, nothing else).
 2. You press **Start session**. The server opens a session and the extension begins following your active tab.
 3. Each time you leave a tab, the extension queues the finished visit and uploads it.
 4. The API stores it (cut to the session window) and the dashboard reads the aggregates.
@@ -109,7 +109,7 @@ The extension talks to `http://localhost:3000` and the dashboard to `http://loca
 
 ## API
 
-All routes are under `/api` and need a bearer token except sign-in, register and the health check.
+All routes are under `/api` and need a login (the dashboard's httpOnly cookie, or a bearer token) except sign-in, register and the health check.
 
 | Method and path | Purpose |
 |---|---|
@@ -147,7 +147,7 @@ GitHub Actions runs four jobs on every push and pull request: server tests (with
 
 ## Privacy
 
-Everything stays on your machine and in your own database. The extension sends visits only to the API you configure. It records the **full URL, domain and page title** of each tracked visit, only while a session is on, and never records the dashboard itself. There are no analytics, no third-party requests and no favicon lookups. Recording only the domain is a sensible next option. In Settings, under **Your data**, you can download everything (JSON, or the visits as CSV), delete the history, or delete the account; deleting asks for your password, and a deleted account's login token stops working immediately.
+Everything stays on your machine and in your own database. The extension sends visits only to the API you configure. It records the **full URL, domain and page title** of each tracked visit, only while a session is on, and never records the dashboard itself. There are no analytics, no third-party requests and no favicon lookups. Recording only the domain is a sensible next option. In Settings, under **Your data**, you can download everything (JSON, or the visits as CSV), delete the history, or delete the account; deleting asks for your password, and a deleted account's login stops working immediately. The dashboard login is an httpOnly cookie that page scripts cannot read, logging out ends it everywhere, and the extension only holds a token that can upload visits.
 
 ## Known limitations
 
