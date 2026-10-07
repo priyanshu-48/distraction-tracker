@@ -66,7 +66,7 @@ async function createWorld() {
     runtime: { onMessageExternal: event("external"), getManifest: () => ({ version: "0.1.0" }) },
   };
 
-  const server = { tracking: true, online: true, status: 200, uploads: [] };
+  const server = { tracking: true, online: true, status: 200, uploads: [], rejected: 0 };
   globalThis.fetch = async (url, options = {}) => {
     if (!server.online) throw new TypeError("Failed to fetch");
     if (url.endsWith("/is-tracking")) {
@@ -74,7 +74,7 @@ async function createWorld() {
     }
     if (url.endsWith("/intervals")) {
       if (server.status === 200) server.uploads.push(...JSON.parse(options.body).intervals);
-      return { ok: server.status === 200, status: server.status, text: async () => "" };
+      return { ok: server.status === 200, status: server.status, text: async () => "", json: async () => ({ success: true, rejected: server.rejected }) };
     }
     throw new Error(`unexpected request ${url}`);
   };
@@ -265,6 +265,73 @@ describe("messages from the dashboard", () => {
     assert.equal(stored.token, undefined);
     assert.equal(stored.authState, undefined);
     assert.equal((await world.message({ type: "PING" })).hasToken, false);
+  });
+
+  it("on TRACKING_CHANGED after Stop, ends the visit in progress at once, without waiting for the poll", async () => {
+    await world.startTracking();
+    await world.goTo(1, "https://a.com/");
+    world.advance(45);
+    world.server.tracking = false; // the dashboard has just pressed Stop
+    const reply = await world.message({ type: "TRACKING_CHANGED" });
+    assert.deepEqual(reply, { status: "ok", tracking: false });
+    assert.equal(world.server.uploads.length, 1);
+    assert.equal(Date.parse(world.server.uploads[0].endedAt) - Date.parse(world.server.uploads[0].startedAt), 45_000);
+    assert.equal((await world.session.get("current")).current, undefined);
+    assert.equal((await world.session.get("tracking")).tracking, false);
+  });
+
+  it("on TRACKING_CHANGED after Start, begins following the tab you are on", async () => {
+    await world.local.set({ token: world.token(7) });
+    world.server.tracking = false;
+    await world.fire("alarm", { name: "poll" }); // it knows tracking is off
+    await world.goTo(1, "https://a.com/");
+    assert.equal((await world.session.get("current")).current, undefined);
+
+    world.server.tracking = true; // the dashboard has just pressed Start
+    const reply = await world.message({ type: "TRACKING_CHANGED" });
+    assert.deepEqual(reply, { status: "ok", tracking: true });
+    assert.equal((await world.session.get("current")).current.domain, "a.com");
+  });
+
+  it("on TRACKING_CHANGED keeps its last known state if the server cannot be reached, and still answers", async () => {
+    await world.startTracking();
+    world.server.online = false;
+    const reply = await world.message({ type: "TRACKING_CHANGED" });
+    assert.deepEqual(reply, { status: "ok", tracking: true });
+  });
+
+  it("on TRACKING_CHANGED with no account connected, answers that nothing is being tracked", async () => {
+    const reply = await world.message({ type: "TRACKING_CHANGED" });
+    assert.deepEqual(reply, { status: "ok", tracking: false });
+  });
+
+  it("on TRACKING_CHANGED uploads anything waiting in the queue", async () => {
+    await world.startTracking();
+    world.server.online = false;
+    await world.goTo(1, "https://a.com/");
+    world.advance(30);
+    await world.goTo(2, "https://b.com/");
+    assert.equal((await world.local.get("queue")).queue.length, 1);
+    world.server.online = true;
+    await world.message({ type: "TRACKING_CHANGED" });
+    assert.equal(world.server.uploads.length, 1);
+  });
+
+  it("warns when the server dropped visits recorded outside a session, and still clears the queue", async () => {
+    await world.startTracking();
+    const warnings = [];
+    const realWarn = console.warn;
+    console.warn = (...args) => warnings.push(args.join(" "));
+    try {
+      world.server.rejected = 2;
+      await world.goTo(1, "https://a.com/");
+      world.advance(30);
+      await world.goTo(2, "https://b.com/");
+    } finally {
+      console.warn = realWarn;
+    }
+    assert.ok(warnings.some((w) => /dropped 2 visit/.test(w)));
+    assert.equal((await world.local.get("queue")).queue.length, 0);
   });
 
   it("ignores messages it does not know", async () => {

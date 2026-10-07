@@ -72,6 +72,14 @@ export async function forgetAccount(): Promise<void> {
   await send({ type: "LOGOUT" });
 }
 
+/**
+ * Tells the extension that a session was just started or stopped, so it re-reads the state now instead of at its
+ * next 30 second check (decisions.md, D-23). Quiet when there is no extension: the server cuts any overrun anyway.
+ */
+export async function notifyTrackingChanged(): Promise<void> {
+  await send({ type: "TRACKING_CHANGED" });
+}
+
 /** Is the extension installed, reachable and connected? */
 export async function checkExtension(): Promise<ExtensionState> {
   if (!extensionId()) return { kind: "unconfigured" };

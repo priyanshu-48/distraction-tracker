@@ -71,7 +71,16 @@ async function flush() {
     if (!res.ok && res.status !== 400) return console.warn(`Upload failed (${res.status}), will retry`);
     if (res.status === 400) console.error("Server rejected batch, dropping it:", await res.text());
 
-    if (res.ok) await chrome.storage.local.set({ lastUploadAt: new Date().toISOString() });
+    if (res.ok) {
+      await chrome.storage.local.set({ lastUploadAt: new Date().toISOString() });
+      // The server keeps only time inside a tracking session; say so if it dropped something (D-23).
+      try {
+        const { rejected } = await res.json();
+        if (rejected) console.warn(`Server dropped ${rejected} visit(s) recorded outside a tracking session`);
+      } catch {
+        // an answer we cannot read is not a reason to keep the batch
+      }
+    }
 
     // Remove only what we sent; new intervals may have been queued meanwhile.
     const sent = new Set(batch.map((i) => i.clientEventId));
@@ -106,7 +115,9 @@ async function refreshTracking() {
     }
   }
   await chrome.storage.session.set({ tracking, checkedAt: Date.now() });
-  // ponytail: stop is noticed on the next poll (<=30s), so the last interval can run a little long.
+  // Start and Stop pressed on the dashboard arrive as TRACKING_CHANGED and are noticed at once. Anywhere else (another
+  // browser, the API) it is the next poll, up to 30 s, so the last interval can run long: the server cuts it at the
+  // session's end (decisions.md, D-23), which keeps the stored time correct either way.
   if (was && !tracking) await closeCurrent();
   if (!was && tracking) await followActiveTab();
   return tracking;
@@ -180,6 +191,14 @@ const dashboardMessages = {
     await refreshTracking();
     await flush();
     return { status: "ok" };
+  },
+
+  // The dashboard just started or stopped a session: read the state now instead of at the next 30 s poll, so Stop
+  // ends the visit in progress at once and Start begins following the tab you are on.
+  async TRACKING_CHANGED() {
+    const tracking = await refreshTracking();
+    await flush();
+    return { status: "ok", tracking };
   },
 
   // Lets the dashboard show whether the extension is installed, connected and working.

@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { checkExtension, forgetAccount, syncToken, type ExtensionReport } from "./extension";
+import { checkExtension, forgetAccount, notifyTrackingChanged, syncToken, type ExtensionReport } from "./extension";
 
 const report: ExtensionReport = {
   status: "ok",
@@ -106,5 +106,31 @@ describe("forgetAccount", () => {
 
   it("never throws when the extension is missing", async () => {
     await expect(forgetAccount()).resolves.toBeUndefined();
+  });
+});
+
+describe("notifyTrackingChanged", () => {
+  it("sends TRACKING_CHANGED to the extension", async () => {
+    const sent = fakeChrome({ TRACKING_CHANGED: { response: { status: "ok", tracking: false } } });
+    await notifyTrackingChanged();
+    expect(sent.map((s) => s.message.type)).toEqual(["TRACKING_CHANGED"]);
+    expect(sent[0].id).toBe("abcdefghijklmnopabcdefghijklmnop");
+  });
+
+  it("never throws, whatever the extension does or does not do", async () => {
+    await expect(notifyTrackingChanged()).resolves.toBeUndefined(); // no extension messaging at all
+    fakeChrome({ TRACKING_CHANGED: { lastError: { message: "Could not establish connection. Receiving end does not exist." } } });
+    await expect(notifyTrackingChanged()).resolves.toBeUndefined();
+    fakeChrome({ TRACKING_CHANGED: { lastError: { message: "The message port closed before a response was received." } } }); // an older extension
+    await expect(notifyTrackingChanged()).resolves.toBeUndefined();
+    fakeChrome({ TRACKING_CHANGED: { throws: true } });
+    await expect(notifyTrackingChanged()).resolves.toBeUndefined();
+  });
+
+  it("does nothing when no extension ID is configured", async () => {
+    vi.stubEnv("VITE_EXTENSION_ID", "");
+    const sent = fakeChrome({});
+    await notifyTrackingChanged();
+    expect(sent).toEqual([]);
   });
 });
