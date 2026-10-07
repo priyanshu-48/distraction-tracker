@@ -13,6 +13,7 @@ import siteRoute from './routes/siteRoute.js';
 import settingsRoute from './routes/settingsRoute.js';
 import summaryRoute from './routes/summaryRoute.js';
 import rangeRoute from './routes/rangeRoute.js';
+import accountRoute from './routes/accountRoute.js';
 import analyticsRoute from './routes/analyticsRoute.js';
 import statBlockRoute from './routes/statBlockRoute.js';
 
@@ -51,6 +52,7 @@ app.use("/api",siteRoute);
 app.use("/api",settingsRoute);
 app.use("/api",summaryRoute);
 app.use("/api",rangeRoute);
+app.use("/api",accountRoute);
 app.use("/api/analytics",analyticsRoute);
 app.use("/api/analytics",statBlockRoute);
 

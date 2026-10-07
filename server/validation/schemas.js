@@ -68,6 +68,10 @@ export const summaryQuerySchema = z.object({
   date: z.string().refine(isCalendarDate, "must be a date such as 2026-10-05"),
 });
 
+// What the account endpoints take: a format for the export, and the password that confirms a deletion.
+export const exportQuerySchema = z.object({ format: z.enum(["json", "csv"]).default("json") });
+export const confirmPasswordSchema = z.object({ password: z.string().min(1).max(72) });
+
 export const rangeQuerySchema = z.object({
   view: z.enum(["week", "month"]),
   date: z.string().refine(isCalendarDate, "must be a date such as 2026-10-05"),
