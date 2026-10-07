@@ -1,3 +1,4 @@
+import { COOKIE_NAME, clearCookieOptions } from "../domain/session.js";
 import { CSV_COLUMNS, csvRow, exportVisit, visitCsvRow } from "../domain/exportFormat.js";
 import { deleteAccount, deleteHistory, getAccountSnapshot, passwordMatches, visitBatches } from "../models/accountModel.js";
 
@@ -70,5 +71,6 @@ export async function deleteAccountHandler(req, res) {
   if (!(await confirmed(req, res))) return;
   await deleteAccount(req.user.id);
   req.log.info({ userId: req.user.id }, "account deleted");
+  res.clearCookie(COOKIE_NAME, clearCookieOptions());
   res.status(204).end();
 }

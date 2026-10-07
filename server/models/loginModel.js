@@ -1,12 +1,13 @@
 import db from '../db.js';
 import bcrypt from "bcrypt";
 import jwt from 'jsonwebtoken';
+import { SESSION_SECONDS, tokenClaims } from '../domain/session.js';
 
 function generateToken(user) {
     return jwt.sign(
-        { id: user.id, email: user.email },
+        tokenClaims(user),
         process.env.JWT_SECRET,
-        { algorithm: 'HS256', expiresIn: '1d' }
+        { algorithm: 'HS256', expiresIn: SESSION_SECONDS }
     );
 }
 
@@ -23,5 +24,6 @@ export async function loginUser(email, password) {
 
     const token = generateToken(user);
     delete user.password_hash;
+    delete user.token_version; // internal: not for the client
     return { user, token };
 }

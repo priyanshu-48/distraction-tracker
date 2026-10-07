@@ -41,7 +41,7 @@ app.use(
   })
 );
 app.use(helmet());
-app.use(cors({ origin: origins }));
+app.use(cors({ origin: origins, credentials: true })); // credentials: the dashboard's cookie
 app.use(express.json({ limit: "256kb" }));
 
 app.use(healthRoute);

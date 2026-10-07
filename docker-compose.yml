@@ -36,6 +36,8 @@ services:
       DB_NAME: distraction_tracker
       # Local-development default only. Set a long random JWT_SECRET in .env for anything shared.
       JWT_SECRET: ${JWT_SECRET:-dev-only-secret-change-me}
+      # The api runs in production mode (Secure login cookie), but this setup is plain http on localhost.
+      COOKIE_SECURE: "false"
       CORS_ORIGINS: http://localhost:${WEB_PORT:-5173}
     ports:
       - "${API_PORT:-3000}:3000"
