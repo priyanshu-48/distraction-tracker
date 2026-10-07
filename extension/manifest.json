@@ -1,12 +1,13 @@
 {
   "name": "Distraction Tracker",
-  "version": "0.2.3",
+  "version": "0.3.0",
   "description": "Records how long you spend on each site while a tracking session is on.",
   "permissions": [
     "storage",
     "alarms",
     "idle",
-    "tabs"
+    "tabs",
+    "notifications"
   ],
   "host_permissions": [
     "http://localhost:3000/*"

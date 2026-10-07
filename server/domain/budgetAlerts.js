@@ -10,11 +10,14 @@ export function reachedBudgetLevel(distractedSeconds, budgetSeconds) {
   return [...BUDGET_LEVELS].reverse().find((level) => distractedSeconds >= budgetSeconds * level) ?? null;
 }
 
-/** "40m", "1h", "1h 5m", "45s": a duration in the short form the dashboard uses. */
+/**
+ * "40m", "1h", "1h 5m", "45s": a short duration. Minutes round DOWN: 4m40s is "4m", so an alert saying "80% used" never
+ * shows "5m of 5m", which would read as the whole budget.
+ */
 export function formatDuration(seconds) {
   const total = Math.max(0, Math.round(seconds));
   if (total < 60) return `${total}s`;
-  const minutes = Math.round(total / 60);
+  const minutes = Math.floor(total / 60);
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
   return h === 0 ? `${m}m` : m === 0 ? `${h}h` : `${h}h ${m}m`;

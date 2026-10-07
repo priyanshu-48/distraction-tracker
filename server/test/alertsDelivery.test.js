@@ -7,7 +7,9 @@ import { settleBackground } from "../notifications/background.js";
 const extensionAuth = async (user) => ({
   Authorization: `Bearer ${(await http().post("/api/auth/extension-token").set(user.auth).expect(200)).body.token}`,
 });
-const poll = async (auth) => (await http().get("/api/is-tracking").set(auth).expect(200)).body;
+// The extension asks for alerts explicitly; the dashboard asks the same question without it.
+const poll = async (auth) => (await http().get("/api/is-tracking?alerts=1").set(auth).expect(200)).body;
+const dashboardPoll = async (auth) => (await http().get("/api/is-tracking").set(auth).expect(200)).body;
 const addAlert = (user, key, { title = "Heads up", minutesOld = 0 } = {}) =>
   db.query(
     "INSERT INTO alerts (user_id, dedupe_key, kind, title, body, created_at) VALUES ($1, $2, 'budget-warning', $3, 'body', NOW() - make_interval(mins => $4))",
@@ -54,6 +56,14 @@ describe("alerts reach the extension through the poll it already makes", () => {
     await addAlert(theirs, "x", { title: "private" });
     expect(await poll(mine.auth)).toEqual({ isTracking: false });
     expect((await poll(theirs.auth)).alerts).toHaveLength(1);
+  });
+
+  it("leaves alerts alone for a poll that does not ask for them, so the dashboard cannot swallow them", async () => {
+    const user = await makeUser();
+    await addAlert(user, "a", { title: "for the extension" });
+    expect(await dashboardPoll(user.auth)).toEqual({ isTracking: false });
+    expect(await dashboardPoll(user.auth)).toEqual({ isTracking: false });
+    expect((await poll(user.auth)).alerts.map((a) => a.title)).toEqual(["for the extension"]); // still there for the extension
   });
 
   it("drops waiting alerts when the user switches notifications off", async () => {

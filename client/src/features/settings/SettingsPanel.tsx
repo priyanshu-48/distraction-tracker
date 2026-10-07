@@ -6,8 +6,9 @@ import { ExtensionCard } from "@/features/setup/ExtensionCard";
 import { useExtensionState } from "@/features/setup/useSetupStatus";
 import { BudgetForm } from "./BudgetForm";
 import { DataCard } from "./DataCard";
+import { NotificationsCard } from "./NotificationsCard";
 
-/** Settings panel: budget, the extension, your data (download or delete) and signing out. */
+/** Settings panel: budget, budget alerts (when the server has them), the extension, your data (download or delete) and signing out. */
 export default function SettingsPanel() {
   const extension = useExtensionState();
   const needsReconnect = extension.data?.kind === "connected" && !(extension.data.report.hasToken && extension.data.report.authState === "ok");
@@ -15,6 +16,7 @@ export default function SettingsPanel() {
   return (
     <div className="space-y-5">
       <BudgetForm />
+      <NotificationsCard />
       <ExtensionCard state={extension.data} />
       {needsReconnect ? (
         <Button

@@ -101,15 +101,38 @@ async function closeCurrent() {
   await flush();
 }
 
+// Budget alerts arrive in the answer to the poll below (the server hands each one over once). Showing one is best effort:
+// a failure here must never get in the way of tracking, and the extension still works where notifications are unavailable.
+const MAX_ALERTS_SHOWN = 3;
+async function showAlerts(alerts) {
+  if (!Array.isArray(alerts) || !chrome.notifications) return;
+  for (const alert of alerts.slice(0, MAX_ALERTS_SHOWN)) {
+    try {
+      await chrome.notifications.create(`dt-alert-${alert.id}`, {
+        type: "basic",
+        iconUrl: chrome.runtime.getURL("assets/ext-icon.png"),
+        title: String(alert.title ?? "").slice(0, 100),
+        message: String(alert.body ?? "").slice(0, 300),
+      });
+    } catch (err) {
+      console.error("Failed to show an alert:", err);
+    }
+  }
+}
+
 async function refreshTracking() {
   const token = await getToken();
   const was = (await getSession()).tracking;
   let tracking = false;
   if (token) {
     try {
-      const res = await fetch(`${API}/is-tracking`, { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API}/is-tracking?alerts=1`, { headers: { Authorization: `Bearer ${token}` } });
       if (res.status === 401) await markLoggedOut();
-      else tracking = res.ok && (await res.json()).isTracking;
+      else if (res.ok) {
+        const answer = await res.json();
+        tracking = answer.isTracking;
+        await showAlerts(answer.alerts);
+      }
     } catch (err) {
       console.error("Failed to fetch tracking status:", err);
       return was; // can't tell; keep the last known state
