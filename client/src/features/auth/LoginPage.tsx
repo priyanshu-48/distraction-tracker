@@ -2,25 +2,28 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { PasswordField, TextField } from "@/components/ui/field";
-import { errorMessage, getToken, HOME_PATH, login } from "@/app/auth";
+import { useQueryClient } from "@tanstack/react-query";
+import { errorMessage, HOME_PATH, login, useSession } from "@/app/auth";
 import { AuthLayout } from "./AuthLayout";
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const session = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
   // Already signed in: skip the form.
-  if (getToken() && !pending) return <Navigate to={HOME_PATH} replace />;
+  if (session.status === "signedIn" && !pending) return <Navigate to={HOME_PATH} replace />;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
     setError(null);
     setPending(true);
     try {
-      await login(email.trim(), password);
+      await login(email.trim(), password, queryClient);
       navigate(HOME_PATH, { replace: true });
     } catch (err) {
       setError(errorMessage(err, "Sign-in failed. Please try again."));

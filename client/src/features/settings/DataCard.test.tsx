@@ -4,17 +4,20 @@ import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation } from "react-router-dom";
+import { SESSION_KEY } from "@/app/auth";
 import { DataCard } from "./DataCard";
 
-const api = vi.hoisted(() => ({ get: vi.fn(), delete: vi.fn() }));
+const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn(), delete: vi.fn() }));
 vi.mock("@/api", () => ({ default: api }));
 const extension = vi.hoisted(() => ({ notify: vi.fn(), forget: vi.fn() }));
 vi.mock("@/lib/extension", () => ({ notifyTrackingChanged: extension.notify, forgetAccount: extension.forget, syncToken: vi.fn() }));
 
 const LocationProbe = () => <p data-testid="where">{useLocation().pathname}</p>;
 
+let client: QueryClient;
 function renderCard() {
-  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  client.setQueryData(SESSION_KEY, { id: 1, email: "a@b.co" });
   const invalidate = vi.spyOn(client, "invalidateQueries");
   render(
     <QueryClientProvider client={client}>
@@ -36,7 +39,7 @@ beforeEach(() => {
   api.delete.mockReset().mockResolvedValue({ data: { success: true, visits: 12, sessions: 3 } });
   extension.notify.mockReset().mockResolvedValue(undefined);
   extension.forget.mockReset().mockResolvedValue(undefined);
-  localStorage.setItem("token", "t");
+  api.post.mockReset().mockResolvedValue({ data: {} });
   URL.createObjectURL = vi.fn(() => "blob:fake");
   URL.revokeObjectURL = vi.fn();
   clicked = [];
@@ -46,11 +49,10 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.restoreAllMocks();
-  localStorage.clear();
 });
 
 describe("downloading your data", () => {
-  it("fetches the JSON export with the login token and saves it as a file named for today", async () => {
+  it("fetches the JSON export with the login cookie and saves it as a file named for today", async () => {
     const user = userEvent.setup();
     renderCard();
     await user.click(screen.getByRole("button", { name: "Everything (JSON)" }));
@@ -208,7 +210,8 @@ describe("deleting the account", () => {
     await waitFor(() => expect(screen.getByTestId("where").textContent).toBe("/login"));
     expect(api.delete).toHaveBeenCalledWith("/account", { data: { password: "my-password" } });
     expect(extension.forget).toHaveBeenCalledTimes(1);
-    expect(localStorage.getItem("token")).toBeNull();
+    expect(client.getQueryData(SESSION_KEY)).toBeNull();
+    expect(api.post).not.toHaveBeenCalledWith("/auth/logout"); // the account is gone; the server already cleared the cookie
   });
 
   it("stays signed in, on the page, when the password is wrong", async () => {
@@ -218,7 +221,7 @@ describe("deleting the account", () => {
     await user.click(screen.getByRole("button", { name: "Delete account" }));
     expect((await screen.findByRole("alert")).textContent).toBe("That password is not correct");
     expect(screen.getByTestId("where").textContent).toBe("/");
-    expect(localStorage.getItem("token")).toBe("t");
+    expect(client.getQueryData(SESSION_KEY)).toEqual({ id: 1, email: "a@b.co" });
     expect(extension.forget).not.toHaveBeenCalled();
   });
 

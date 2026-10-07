@@ -1,7 +1,7 @@
 import { CheckCircle2, Circle, CircleDot } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getToken } from "@/app/auth";
-import { syncToken, type ExtensionState } from "@/lib/extension";
+import { syncExtension } from "@/app/auth";
+import type { ExtensionState } from "@/lib/extension";
 import { useToggleSession } from "@/features/session/queries";
 import type { SetupStatus } from "./useSetupStatus";
 import type { SetupStep } from "./steps";
@@ -53,8 +53,7 @@ export function SetupChecklist({ status }: { status: SetupStatus }) {
   const report = status.extension.data?.kind === "connected" ? status.extension.data.report : null;
 
   async function connect() {
-    const token = getToken();
-    if (token) await syncToken(token);
+    await syncExtension();
     await status.refetchExtension();
   }
 

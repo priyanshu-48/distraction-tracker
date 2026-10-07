@@ -19,6 +19,7 @@ const world = vi.hoisted(() => ({
 vi.mock("@/api", () => ({
   default: {
     get: vi.fn(async (url: string, config?: { params?: { view?: string; date?: string } }) => {
+      if (url === "/auth/me") return { data: { user: { id: 1, email: "a@b.co" } } };
       if (url === "/is-tracking") return { data: { isTracking: world.tracking } };
       if (url === "/sites") return { data: { days: 90, total: world.totalVisits, sites: [] } };
       if (url === "/settings") return { data: { dailyBudgetSeconds: 7200 } };
@@ -85,7 +86,6 @@ function renderAt(url = "/") {
 }
 
 beforeEach(() => {
-  localStorage.setItem("token", "tok");
   world.extension = connected();
   world.totalVisits = 5;
   world.tracking = false;
@@ -94,7 +94,6 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.useRealTimers();
-  localStorage.clear();
 });
 
 describe("period navigation", () => {

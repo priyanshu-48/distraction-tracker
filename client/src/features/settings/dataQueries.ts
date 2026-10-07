@@ -45,7 +45,7 @@ export function useDeleteAccount() {
   return useMutation({
     mutationFn: async (password: string) => void (await api.delete("/account", { data: { password } })),
     onSuccess: async () => {
-      await logout(queryClient);
+      await logout(queryClient, { serverSide: false }); // the account is gone, and the server cleared the cookie
       navigate("/login", { replace: true });
     },
   });

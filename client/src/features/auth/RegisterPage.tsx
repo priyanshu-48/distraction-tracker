@@ -2,7 +2,8 @@ import { useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { PasswordField, TextField } from "@/components/ui/field";
-import { errorMessage, getToken, login, register, SETUP_PATH } from "@/app/auth";
+import { useQueryClient } from "@tanstack/react-query";
+import { errorMessage, login, register, SETUP_PATH, useSession } from "@/app/auth";
 import { AuthLayout } from "./AuthLayout";
 
 // Same limits as the server (bcrypt ignores everything past 72 bytes).
@@ -26,6 +27,8 @@ function validate(email: string, password: string, confirm: string): FieldErrors
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const session = useSession();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -33,7 +36,7 @@ export default function RegisterPage() {
   const [formError, setFormError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
 
-  if (getToken() && !pending) return <Navigate to={SETUP_PATH} replace />;
+  if (session.status === "signedIn" && !pending) return <Navigate to={SETUP_PATH} replace />;
 
   async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
@@ -51,7 +54,7 @@ export default function RegisterPage() {
       return;
     }
     try {
-      await login(email.trim(), password);
+      await login(email.trim(), password, queryClient);
       navigate(SETUP_PATH, { replace: true });
     } catch {
       setFormError("Your account was created, but signing in failed. Try signing in.");

@@ -1,8 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
 import { LogoutButton } from "@/components/layout/LogoutButton";
-import { getToken } from "@/app/auth";
-import { syncToken } from "@/lib/extension";
+import { syncExtension } from "@/app/auth";
 import { ExtensionCard } from "@/features/setup/ExtensionCard";
 import { useExtensionState } from "@/features/setup/useSetupStatus";
 import { BudgetForm } from "./BudgetForm";
@@ -21,8 +20,7 @@ export default function SettingsPanel() {
         <Button
           variant="secondary"
           onClick={async () => {
-            const token = getToken();
-            if (token) await syncToken(token);
+            await syncExtension();
             await extension.refetch();
           }}
         >

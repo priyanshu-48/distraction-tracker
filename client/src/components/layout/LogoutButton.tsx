@@ -3,15 +3,16 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { getToken, logout } from "@/app/auth";
+import { logout, useSession } from "@/app/auth";
 
 /** Signs out, and tells the extension so it stops recording as this account. */
 export function LogoutButton() {
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [pending, setPending] = useState(false);
+  const session = useSession();
 
-  if (!getToken()) return null;
+  if (session.status !== "signedIn") return null;
   return (
     <Button
       variant="ghost"
