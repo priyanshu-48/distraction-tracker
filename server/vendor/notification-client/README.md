@@ -1,7 +1,7 @@
 # notification-client (vendored)
 
 `client.js` is the server-side client of the notification service, copied from
-`priyanshu-48/notification-service`, `sdk/` (built with `npm run sdk:build`), at commit `88c1c35`.
+`priyanshu-48/notification-service`, `sdk/` (built with `npm run sdk:build`), at commit `c4421b6`.
 It has no dependencies. The only change is that the trailing `//# sourceMappingURL` comment was removed, because the map file is not vendored. Only the server-side `NotificationClient` is used here; the tracker's
 dashboard vendors the browser stream separately.
 

@@ -92,6 +92,10 @@ export class NotificationClient {
     /** Re-queue a failed notification. */
     replayNotification(id) { return this.json('POST', `/v1/notifications/${id}/replay`, { retry: false }); }
     upsertUser(externalUserId, user) { return this.json('PUT', `/v1/users/${encodeURIComponent(externalUserId)}`, { body: user }); }
+    /** Erase a user and everything held about them: their notifications, delivery attempts and preferences. Safe to repeat. */
+    async deleteUser(externalUserId) {
+        await this.json('DELETE', `/v1/users/${encodeURIComponent(externalUserId)}`);
+    }
     async getPreferences(externalUserId) { return (await this.json('GET', `/v1/users/${encodeURIComponent(externalUserId)}/preferences`)).preferences; }
     /** Replaces the user's whole preference set. */
     async setPreferences(externalUserId, preferences) {

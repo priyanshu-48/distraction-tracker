@@ -7,7 +7,8 @@ if (!process.env.DB_NAME?.startsWith("dt_test")) {
 }
 
 beforeEach(async () => {
-  await db.query("TRUNCATE users RESTART IDENTITY CASCADE");
+  // pending_erasures deliberately has no foreign key to users (the user is usually already gone), so CASCADE does not reach it.
+  await db.query("TRUNCATE users, pending_erasures RESTART IDENTITY CASCADE");
 });
 
 afterAll(async () => {

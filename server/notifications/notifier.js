@@ -13,7 +13,7 @@ import { NotificationClient } from "../vendor/notification-client/client.js";
 export function createNotifier({ env = process.env, client, log = logger } = {}) {
   const baseUrl = env.NOTIFICATIONS_API_URL;
   const apiKey = env.NOTIFICATIONS_API_KEY;
-  if (!client && !(baseUrl && apiKey)) return { enabled: false, async send() { return null; } };
+  if (!client && !(baseUrl && apiKey)) return { enabled: false, async send() { return null; }, async erase() { return false; } };
 
   // A short timeout and two retries: alerts are not worth holding a connection open for.
   const api = client ?? new NotificationClient({ baseUrl, apiKey, timeoutMs: 5000, maxRetries: 2 });
@@ -34,6 +34,21 @@ export function createNotifier({ env = process.env, client, log = logger } = {})
         // Only the message and status: never the request body, which holds the user's email.
         log.warn({ reason: error?.message, status: error?.status }, "notification service call failed; alert not sent");
         return null;
+      }
+    },
+    /**
+     * Asks the service to erase the user and everything it holds about them. True only when the service confirmed (it
+     * answers the same for a user it never knew, so a repeat is fine). Never throws: the caller keeps the request and retries.
+     */
+    async erase(user) {
+      try {
+        const externalUserId = String(user.id);
+        await api.deleteUser(externalUserId);
+        registered.delete(externalUserId); // the next alert must register the user afresh
+        return true;
+      } catch (error) {
+        log.warn({ reason: error?.message, status: error?.status }, "notification service call failed; erasure will be retried");
+        return false;
       }
     },
   };
