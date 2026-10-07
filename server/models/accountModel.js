@@ -55,18 +55,25 @@ export async function* visitBatches(userId, size = 2000) {
  * the list of marked sites stay. A session that was running is deleted too; visits the extension uploads afterwards are
  * dropped by the server until a new session starts.
  */
-export async function deleteHistory(userId) {
+export async function deleteHistory(userId, { eraseRemotely = false } = {}) {
   const { rows } = await db.query(
     `WITH v AS (DELETE FROM tab_activity WHERE user_id = $1 RETURNING 1),
           s AS (DELETE FROM tracking_sessions WHERE user_id = $1 RETURNING 1),
-          a AS (DELETE FROM alerts WHERE user_id = $1 RETURNING 1) -- alerts name sites and times, so they are history too
+          a AS (DELETE FROM alerts WHERE user_id = $1 RETURNING 1), -- alerts name sites and times, so they are history too
+          -- the notification service holds copies of what was sent about this history; ask it to erase them too (D-39)
+          e AS (INSERT INTO pending_erasures (user_id) SELECT $1::integer WHERE $2::boolean ON CONFLICT (user_id) DO NOTHING)
      SELECT (SELECT COUNT(*) FROM v) AS visits, (SELECT COUNT(*) FROM s) AS sessions, (SELECT COUNT(*) FROM a) AS alerts`,
-    [userId]
+    [userId, eraseRemotely]
   );
   return { visits: Number(rows[0].visits), sessions: Number(rows[0].sessions) };
 }
 
 /** Deletes the account. Every other table references users with ON DELETE CASCADE, so nothing is left behind. */
-export async function deleteAccount(userId) {
-  await db.query("DELETE FROM users WHERE id = $1", [userId]);
+export async function deleteAccount(userId, { eraseRemotely = false } = {}) {
+  // One statement, so the request to erase what the notification service holds cannot be lost between the two steps.
+  await db.query(
+    `WITH e AS (INSERT INTO pending_erasures (user_id) SELECT $1::integer WHERE $2::boolean ON CONFLICT (user_id) DO NOTHING)
+     DELETE FROM users WHERE id = $1`,
+    [userId, eraseRemotely]
+  );
 }

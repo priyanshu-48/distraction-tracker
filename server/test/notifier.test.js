@@ -76,3 +76,39 @@ describe("sending", () => {
     expect(client.upsertUser).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("erasing", () => {
+  const fakeClient = () => ({
+    upsertUser: vi.fn().mockResolvedValue({}),
+    send: vi.fn().mockResolvedValue({ id: "n1" }),
+    deleteUser: vi.fn().mockResolvedValue(undefined),
+  });
+
+  it("does nothing, and reports false, when it is not configured", async () => {
+    expect(await createNotifier({ env: {}, log: quietLog() }).erase(user)).toBe(false);
+  });
+
+  it("asks the service to erase the user by their id and reports true once it answers", async () => {
+    const client = fakeClient();
+    expect(await createNotifier({ client, log: quietLog() }).erase(user)).toBe(true);
+    expect(client.deleteUser).toHaveBeenCalledWith("7");
+  });
+
+  it("never throws when the service fails: it reports false and logs without the user's details", async () => {
+    const client = fakeClient();
+    client.deleteUser.mockRejectedValue(Object.assign(new Error("service asleep"), { status: 0 }));
+    const log = quietLog();
+    await expect(createNotifier({ client, log }).erase(user)).resolves.toBe(false);
+    expect(log.warn).toHaveBeenCalledOnce();
+    expect(JSON.stringify(log.warn.mock.calls)).not.toContain("me@test.io");
+  });
+
+  it("registers the user afresh with the next alert after erasing them", async () => {
+    const client = fakeClient();
+    const notifier = createNotifier({ client, log: quietLog() });
+    await notifier.send(user, alert);
+    await notifier.erase(user);
+    await notifier.send(user, { ...alert, idempotencyKey: "k2" });
+    expect(client.upsertUser).toHaveBeenCalledTimes(2);
+  });
+});

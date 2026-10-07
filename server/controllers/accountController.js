@@ -1,6 +1,14 @@
 import { COOKIE_NAME, clearCookieOptions } from "../domain/session.js";
 import { CSV_COLUMNS, csvRow, exportVisit, visitCsvRow } from "../domain/exportFormat.js";
 import { deleteAccount, deleteHistory, getAccountSnapshot, passwordMatches, visitBatches } from "../models/accountModel.js";
+import { runInBackground } from "../notifications/background.js";
+import { eraseNow } from "../notifications/erasure.js";
+import { getNotifier } from "../notifications/notifier.js";
+
+// What the notification service holds about a user is erased too. The request is recorded together with the deletion, so it
+// is never lost; trying now (in the background, never holding up the response) just makes the usual case instant.
+const eraseInBackground = (req, userId) =>
+  runInBackground(eraseNow(userId).catch((err) => req.log.warn({ err }, "erasing at the notification service failed; it will be retried")));
 
 // Waits for the client to catch up when its connection is full, so a slow download cannot make the server buffer it all.
 const write = (res, chunk) => res.write(chunk) || new Promise((resolve) => res.once("drain", resolve));
@@ -63,14 +71,18 @@ async function confirmed(req, res) {
 
 export async function deleteHistoryHandler(req, res) {
   if (!(await confirmed(req, res))) return;
-  const deleted = await deleteHistory(req.user.id);
+  const eraseRemotely = getNotifier().enabled;
+  const deleted = await deleteHistory(req.user.id, { eraseRemotely });
+  if (eraseRemotely) eraseInBackground(req, req.user.id);
   req.log.info({ userId: req.user.id, ...deleted }, "history deleted");
   res.json({ success: true, ...deleted });
 }
 
 export async function deleteAccountHandler(req, res) {
   if (!(await confirmed(req, res))) return;
-  await deleteAccount(req.user.id);
+  const eraseRemotely = getNotifier().enabled;
+  await deleteAccount(req.user.id, { eraseRemotely });
+  if (eraseRemotely) eraseInBackground(req, req.user.id);
   req.log.info({ userId: req.user.id }, "account deleted");
   res.clearCookie(COOKIE_NAME, clearCookieOptions());
   res.status(204).end();
