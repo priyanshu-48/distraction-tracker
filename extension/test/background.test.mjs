@@ -193,6 +193,111 @@ describe("recording visits", () => {
   });
 });
 
+describe("one visit is one stay on a site", () => {
+  let world;
+  beforeEach(async () => {
+    world = await createWorld();
+    await world.startTracking();
+  });
+
+  it("does not start a new visit when the URL changes inside the site (YouTube, X and other single-page apps)", async () => {
+    await world.goTo(1, "https://www.youtube.com/");
+    world.advance(10);
+    await world.goTo(1, "https://www.youtube.com/@someone");
+    world.advance(5);
+    await world.goTo(1, "https://www.youtube.com/@someone/videos");
+    world.advance(5);
+    await world.goTo(1, "https://www.youtube.com/watch?v=abc");
+    world.advance(30);
+    await world.goTo(2, "https://github.com/");
+    assert.equal(world.server.uploads.length, 1);
+    const [visit] = world.server.uploads;
+    assert.equal(visit.domain, "www.youtube.com");
+    assert.equal(Date.parse(visit.endedAt) - Date.parse(visit.startedAt), 50_000);
+    assert.equal(visit.url, "https://www.youtube.com/"); // keeps the page it started on
+  });
+
+  it("treats a page reload or a query-string change as the same visit", async () => {
+    await world.goTo(1, "https://x.com/home");
+    world.advance(20);
+    await world.fire("updated", 1, { status: "complete" }, { id: 1, url: "https://x.com/home?lang=en", title: "T", active: true });
+    world.advance(20);
+    await world.goTo(2, "https://github.com/");
+    assert.equal(world.server.uploads.length, 1);
+    assert.equal(world.server.uploads[0].domain, "x.com");
+  });
+
+  it("treats www and the bare domain as the same site", async () => {
+    await world.goTo(1, "https://youtube.com/");
+    world.advance(10);
+    await world.goTo(1, "https://www.youtube.com/watch?v=abc");
+    world.advance(10);
+    await world.goTo(2, "https://github.com/");
+    assert.equal(world.server.uploads.length, 1);
+  });
+
+  it("carries the visit over to another tab on the same site, and closing the old tab does not end it", async () => {
+    await world.goTo(1, "https://youtube.com/");
+    world.advance(20);
+    await world.goTo(2, "https://youtube.com/watch?v=abc"); // a video opened in a new tab
+    world.advance(20);
+    await world.fire("removed", 1); // the first tab is closed
+    assert.equal(world.server.uploads.length, 0);
+    assert.equal((await world.session.get("current")).current.tabId, 2);
+    world.advance(20);
+    await world.goTo(3, "https://github.com/");
+    assert.equal(world.server.uploads.length, 1);
+    assert.equal(Date.parse(world.server.uploads[0].endedAt) - Date.parse(world.server.uploads[0].startedAt), 60_000);
+  });
+
+  it("still starts a new visit when you move to a different site in the same tab", async () => {
+    await world.goTo(1, "https://youtube.com/");
+    world.advance(20);
+    await world.goTo(1, "https://github.com/");
+    world.advance(20);
+    await world.goTo(1, "https://reddit.com/");
+    assert.deepEqual(world.server.uploads.map((v) => v.domain), ["youtube.com", "github.com"]);
+  });
+
+  it("counts leaving a site and coming back as two visits", async () => {
+    await world.goTo(1, "https://youtube.com/");
+    world.advance(20);
+    await world.goTo(2, "https://github.com/");
+    world.advance(20);
+    await world.goTo(1, "https://youtube.com/");
+    world.advance(20);
+    await world.goTo(2, "https://github.com/");
+    assert.deepEqual(world.server.uploads.map((v) => v.domain), ["youtube.com", "github.com", "youtube.com"]);
+  });
+
+  it("keeps different subdomains apart: docs.google.com and mail.google.com are different sites", async () => {
+    await world.goTo(1, "https://docs.google.com/document/d/1");
+    world.advance(20);
+    await world.goTo(1, "https://mail.google.com/mail/u/0");
+    world.advance(20);
+    await world.goTo(2, "https://github.com/");
+    assert.deepEqual(world.server.uploads.map((v) => v.domain), ["docs.google.com", "mail.google.com"]);
+  });
+
+  it("still ends the visit when the browser loses focus, however much you navigated before", async () => {
+    await world.goTo(1, "https://youtube.com/");
+    world.advance(10);
+    await world.goTo(1, "https://youtube.com/watch?v=abc");
+    world.advance(20);
+    await world.fire("focus", -1); // another app takes focus
+    assert.equal(world.server.uploads.length, 1);
+    assert.equal(Date.parse(world.server.uploads[0].endedAt) - Date.parse(world.server.uploads[0].startedAt), 30_000);
+  });
+
+  it("still never records the dashboard, even when it is the same host as nothing else", async () => {
+    await world.goTo(1, "https://youtube.com/");
+    world.advance(20);
+    await world.goTo(2, "http://localhost:5173/");
+    assert.equal(world.server.uploads.length, 1);
+    assert.equal((await world.session.get("current")).current, undefined);
+  });
+});
+
 describe("messages from the dashboard", () => {
   let world;
   beforeEach(async () => {

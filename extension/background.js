@@ -128,6 +128,10 @@ async function isTracking() {
   return checkedAt && Date.now() - checkedAt < STATUS_TTL_MS ? tracking : refreshTracking();
 }
 
+// The site a URL belongs to, as far as "is this still the same visit" goes: the host without a leading "www.".
+// Deliberately not the registrable domain: docs.google.com and mail.google.com are different sites (D-33).
+const siteOf = (url) => new URL(url).hostname.replace(/^www\./, "");
+
 function isTrackable(url) {
   return !!url?.startsWith("http") && new URL(url).origin !== DASHBOARD_ORIGIN;
 }
@@ -136,7 +140,13 @@ function isTrackable(url) {
 async function startFor(tab) {
   if (!isTrackable(tab?.url) || !(await isTracking())) return closeCurrent();
   const { current } = await getSession();
-  if (current?.tabId === tab.id && current.url === tab.url) return;
+  // A visit is a stay on one site. YouTube, X and most modern sites change the URL without ever leaving, and you may
+  // open another tab on the same site; neither starts a new visit (that counted one stay as three or four).
+  // Leaving the site, the browser or going idle still ends it. The visit keeps the URL and title it started with.
+  if (current && siteOf(current.url) === siteOf(tab.url)) {
+    if (current.tabId !== tab.id) await chrome.storage.session.set({ current: { ...current, tabId: tab.id } });
+    return;
+  }
   await closeCurrent();
   await chrome.storage.session.set({
     current: {
