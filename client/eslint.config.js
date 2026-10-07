@@ -31,6 +31,8 @@ export default [
       ],
     },
   },
+  // The Vite config runs in Node (it reads process.cwd() and process.env), not in the browser.
+  { files: ['vite.config.js'], languageOptions: { globals: globals.node } },
   // New UI is TypeScript; type errors are caught by `npm run typecheck`.
   ...tseslint.configs.recommended.map((config) => ({ ...config, files: ['**/*.{ts,tsx}'] })),
   {
