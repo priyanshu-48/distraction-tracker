@@ -77,6 +77,12 @@ export const rangeQuerySchema = z.object({
   date: z.string().refine(isCalendarDate, "must be a date such as 2026-10-05"),
 });
 
+// Notifications are opt-in. The browser's zone is sent so "today" and "Monday morning" mean the user's own.
+export const notificationSettingsSchema = z.object({
+  enabled: z.boolean(),
+  timeZone: z.string().min(1).max(64).default("UTC"),
+});
+
 // 5 minutes to 24 hours, whole seconds (the database enforces the same range).
 export const settingsSchema = z.object({
   dailyBudgetSeconds: z.number().int().min(300).max(86_400),

@@ -1,6 +1,8 @@
 import bcrypt from "bcrypt";
 import db from "../db.js";
 import { DEFAULT_DAILY_BUDGET_SECONDS } from "./settingsModel.js";
+import { listAlerts } from "./alertModel.js";
+import { getNotificationSettings } from "./notificationSettingsModel.js";
 
 /** Does `password` match the one this account was created with? False for an unknown account too. */
 export async function passwordMatches(userId, password) {
@@ -12,11 +14,13 @@ const MISSING_ACCOUNT_HASH = bcrypt.hashSync("no-such-account", 10);
 
 /** Everything about the account except the visits (those are read in batches): who, settings, marked sites, sessions. */
 export async function getAccountSnapshot(userId) {
-  const [account, settings, sites, sessions] = await Promise.all([
+  const [account, settings, sites, sessions, notificationSettings, alerts] = await Promise.all([
     db.query("SELECT email, created_at FROM users WHERE id = $1", [userId]),
     db.query("SELECT daily_budget_seconds FROM user_settings WHERE user_id = $1", [userId]),
     db.query("SELECT domain FROM distraction_sites WHERE user_id = $1 ORDER BY domain", [userId]),
     db.query("SELECT start_time, end_time FROM tracking_sessions WHERE user_id = $1 ORDER BY start_time", [userId]),
+    getNotificationSettings(userId),
+    listAlerts(userId),
   ]);
   return {
     email: account.rows[0].email,
@@ -24,6 +28,7 @@ export async function getAccountSnapshot(userId) {
     dailyBudgetSeconds: settings.rows[0]?.daily_budget_seconds ?? DEFAULT_DAILY_BUDGET_SECONDS,
     distractionSites: sites.rows.map((r) => r.domain),
     sessions: sessions.rows.map((r) => ({ start: r.start_time.toISOString(), end: r.end_time ? r.end_time.toISOString() : null })),
+    notifications: { ...notificationSettings, alerts },
   };
 }
 
@@ -53,8 +58,9 @@ export async function* visitBatches(userId, size = 2000) {
 export async function deleteHistory(userId) {
   const { rows } = await db.query(
     `WITH v AS (DELETE FROM tab_activity WHERE user_id = $1 RETURNING 1),
-          s AS (DELETE FROM tracking_sessions WHERE user_id = $1 RETURNING 1)
-     SELECT (SELECT COUNT(*) FROM v) AS visits, (SELECT COUNT(*) FROM s) AS sessions`,
+          s AS (DELETE FROM tracking_sessions WHERE user_id = $1 RETURNING 1),
+          a AS (DELETE FROM alerts WHERE user_id = $1 RETURNING 1) -- alerts name sites and times, so they are history too
+     SELECT (SELECT COUNT(*) FROM v) AS visits, (SELECT COUNT(*) FROM s) AS sessions, (SELECT COUNT(*) FROM a) AS alerts`,
     [userId]
   );
   return { visits: Number(rows[0].visits), sessions: Number(rows[0].sessions) };

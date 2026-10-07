@@ -120,6 +120,7 @@ All routes are under `/api` and need a login (the dashboard's httpOnly cookie, o
 | `GET /range?view=week\|month&date=` | Everything the Week and Month views show |
 | `GET /sites`, `PUT /sites/:domain` | List sites with usage; mark or unmark one as a distraction |
 | `GET /settings`, `PUT /settings` | The daily distraction budget |
+| `GET /notifications/settings`, `PUT /notifications/settings` | Switch budget alerts on or off (off by default) and the user's time zone |
 | `GET /account/export?format=json\|csv` | Download everything (JSON) or the visits only (CSV), streamed |
 | `DELETE /account/data`, `DELETE /account` | Delete the history, or the whole account; both need the password in the body |
 | `GET /healthz` (no `/api` prefix) | Database check for orchestrators |
@@ -147,7 +148,7 @@ GitHub Actions runs four jobs on every push and pull request: server tests (with
 
 ## Privacy
 
-Everything stays on your machine and in your own database. The extension sends visits only to the API you configure. It records the **full URL, domain and page title** of each tracked visit, only while a session is on, and never records the dashboard itself. There are no analytics, no third-party requests and no favicon lookups. Recording only the domain is a sensible next option. In Settings, under **Your data**, you can download everything (JSON, or the visits as CSV), delete the history, or delete the account; deleting asks for your password, and a deleted account's login stops working immediately. The dashboard login is an httpOnly cookie that page scripts cannot read, logging out ends it everywhere, and the extension only holds a token that can upload visits.
+By default everything stays on your machine and in your own database. The extension sends visits only to the API you configure. It records the **full URL, domain and page title** of each tracked visit, only while a session is on, and never records the dashboard itself. There are no analytics, no third-party requests and no favicon lookups. Recording only the domain is a sensible next option. In Settings, under **Your data**, you can download everything (JSON, or the visits as CSV), delete the history, or delete the account; deleting asks for your password, and a deleted account's login stops working immediately. **Optional notifications are the one exception, and are off unless you turn them on twice:** the server operator sets `NOTIFICATIONS_API_URL` and `NOTIFICATIONS_API_KEY` to connect a notification service, and each user switches alerts on in Settings. Only then are your account id and email, a site name and a time (for example "youtube.com: 40m") sent to that service. URLs and page titles are never sent. Your export includes your notification settings and alerts, deleting your history deletes the alerts, and deleting your account removes the tracker's records (the notification service keeps its own copy until it is told to remove it, which it cannot yet be). The dashboard login is an httpOnly cookie that page scripts cannot read, logging out ends it everywhere, and the extension only holds a token that can upload visits.
 
 ## Known limitations
 
@@ -156,6 +157,7 @@ Everything stays on your machine and in your own database. The extension sends v
 - The production client build takes about five minutes; the cause is not yet found.
 - Each of the 31 bars in the Month view is narrow on a phone; the Day view's date stepper is the fallback.
 - The server still contains the original `/api/analytics` endpoints, which the dashboard no longer calls.
+- Budget alerts are recorded and sent, but showing them as Chrome notifications and in the dashboard comes in a later change. They use a hosted notification service; deleting your account here does not yet delete what that service holds.
 
 ## Project structure
 
