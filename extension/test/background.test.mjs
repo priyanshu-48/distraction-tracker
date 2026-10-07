@@ -50,10 +50,12 @@ async function createWorld() {
   const listeners = {};
   const event = (name) => ({ addListener: (fn) => (listeners[name] ??= []).push(fn) });
   let activeTab;
+  let idleState = "active";
+  let windowFocused = true;
 
   globalThis.chrome = {
     storage: { local, session },
-    idle: { setDetectionInterval() {}, onStateChanged: event("idle") },
+    idle: { setDetectionInterval() {}, onStateChanged: event("idle"), queryState: async () => idleState },
     tabs: {
       onActivated: event("activated"),
       onUpdated: event("updated"),
@@ -61,7 +63,7 @@ async function createWorld() {
       query: async () => (activeTab ? [activeTab] : []),
       get: async () => activeTab,
     },
-    windows: { onFocusChanged: event("focus"), WINDOW_ID_NONE: -1 },
+    windows: { onFocusChanged: event("focus"), WINDOW_ID_NONE: -1, getLastFocused: async () => ({ focused: windowFocused }) },
     alarms: { create() {}, onAlarm: event("alarm") },
     runtime: { onMessageExternal: event("external"), getManifest: () => ({ version: "0.1.0" }) },
   };
@@ -93,6 +95,22 @@ async function createWorld() {
       activeTab = { id, url, title: "T", active: true };
       listeners.activated.forEach((fn) => fn({ tabId: id }));
       await settle();
+    },
+    /** The system goes idle, locked or active again, as Chrome reports it. */
+    async setIdle(state) {
+      idleState = state;
+      listeners.idle.forEach((fn) => fn(state));
+      await settle();
+    },
+    /** The tab in front starts or stops playing sound. */
+    async setAudible(audible) {
+      activeTab = { ...activeTab, audible };
+      listeners.updated.forEach((fn) => fn(activeTab.id, { audible }, activeTab));
+      await settle();
+    },
+    /** Whether the browser is the app in front (for the idle checks; use fire("focus", ...) for the focus events). */
+    setWindowFocused(value) {
+      windowFocused = value;
     },
     async fire(name, ...args) {
       listeners[name].forEach((fn) => fn(...args));
@@ -295,6 +313,129 @@ describe("one visit is one stay on a site", () => {
     await world.goTo(2, "http://localhost:5173/");
     assert.equal(world.server.uploads.length, 1);
     assert.equal((await world.session.get("current")).current, undefined);
+  });
+});
+
+describe("watching or listening without touching the keyboard", () => {
+  let world;
+  const seconds = (visit) => (Date.parse(visit.endedAt) - Date.parse(visit.startedAt)) / 1000;
+  beforeEach(async () => {
+    world = await createWorld();
+    await world.startTracking();
+  });
+
+  it("keeps counting when you go idle while the tab in front is playing sound, as one visit", async () => {
+    await world.goTo(1, "https://youtube.com/watch?v=abc");
+    world.advance(10);
+    await world.setAudible(true); // while you are active, sound changes mean nothing
+    world.advance(50);
+    await world.setIdle("idle"); // a minute without input: a video is exactly what this looks like
+    assert.equal(world.server.uploads.length, 0);
+    world.advance(240);
+    await world.setIdle("active"); // you touch the mouse again
+    assert.equal(world.server.uploads.length, 0);
+    world.advance(10);
+    await world.goTo(2, "https://github.com/");
+    assert.equal(world.server.uploads.length, 1);
+    assert.equal(seconds(world.server.uploads[0]), 310);
+  });
+
+  it("still ends the visit when you go idle on a silent tab, counting up to that moment", async () => {
+    await world.goTo(1, "https://youtube.com/");
+    world.advance(60);
+    await world.setIdle("idle");
+    assert.equal(world.server.uploads.length, 1);
+    assert.equal(seconds(world.server.uploads[0]), 60);
+  });
+
+  it("ends the visit when the screen is locked, even with sound playing", async () => {
+    await world.goTo(1, "https://youtube.com/");
+    await world.setAudible(true);
+    world.advance(45);
+    await world.setIdle("locked");
+    assert.equal(world.server.uploads.length, 1);
+    assert.equal(seconds(world.server.uploads[0]), 45);
+  });
+
+  it("ignores sound changes on a locked screen: nobody is there", async () => {
+    await world.goTo(1, "https://youtube.com/");
+    world.advance(30);
+    await world.setIdle("locked");
+    assert.equal(world.server.uploads.length, 1);
+    await world.setAudible(true);
+    assert.equal((await world.session.get("current")).current, undefined);
+  });
+
+  it("ends the visit at the moment the sound stops while you are idle, not at your next input", async () => {
+    await world.goTo(1, "https://youtube.com/");
+    await world.setAudible(true);
+    world.advance(30);
+    await world.setIdle("idle");
+    world.advance(120);
+    await world.setAudible(false); // the video ended
+    assert.equal(world.server.uploads.length, 1);
+    assert.equal(seconds(world.server.uploads[0]), 150);
+    assert.equal((await world.session.get("current")).current, undefined);
+  });
+
+  it("starts counting again when sound starts while you are idle (the next video in a playlist)", async () => {
+    await world.goTo(1, "https://youtube.com/");
+    world.advance(60);
+    await world.setIdle("idle"); // silent: the visit ends
+    assert.equal(world.server.uploads.length, 1);
+    world.advance(30);
+    await world.setAudible(true);
+    assert.equal((await world.session.get("current")).current.domain, "youtube.com");
+    world.advance(60);
+    await world.setAudible(false);
+    assert.equal(world.server.uploads.length, 2);
+    assert.equal(seconds(world.server.uploads[1]), 60);
+  });
+
+  it("ignores sound starting and stopping while you are active", async () => {
+    await world.goTo(1, "https://youtube.com/");
+    world.advance(10);
+    await world.setAudible(true);
+    world.advance(10);
+    await world.setAudible(false);
+    assert.equal(world.server.uploads.length, 0);
+    assert.ok((await world.session.get("current")).current);
+  });
+
+  it("ignores sound in a tab that is not the one in front", async () => {
+    await world.goTo(1, "https://github.com/");
+    world.advance(60);
+    await world.setIdle("idle"); // silent front tab: ends
+    assert.equal(world.server.uploads.length, 1);
+    await world.fire("updated", 2, { audible: true }, { id: 2, url: "https://open.spotify.com/", active: false, audible: true });
+    assert.equal((await world.session.get("current")).current, undefined);
+  });
+
+  it("ignores sound while the browser is not the app in front", async () => {
+    await world.goTo(1, "https://youtube.com/");
+    world.advance(60);
+    await world.setIdle("idle");
+    world.setWindowFocused(false);
+    await world.setAudible(true);
+    assert.equal((await world.session.get("current")).current, undefined);
+  });
+
+  it("does not start counting on sound once the session has been stopped", async () => {
+    await world.goTo(1, "https://youtube.com/");
+    world.advance(60);
+    await world.setIdle("idle");
+    await world.session.set({ tracking: false });
+    await world.setAudible(true);
+    assert.equal((await world.session.get("current")).current, undefined);
+  });
+
+  it("never records the dashboard, even when it is playing sound", async () => {
+    await world.goTo(1, "http://localhost:5173/");
+    await world.setAudible(true);
+    await world.setIdle("idle");
+    await world.setAudible(true);
+    assert.equal((await world.session.get("current")).current, undefined);
+    assert.equal(world.server.uploads.length, 0);
   });
 });
 

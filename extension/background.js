@@ -14,7 +14,8 @@ const QUEUE_CAP = 1000;
 // ponytail: an in-progress interval lives only in session storage, so closing the
 // browser mid-visit loses that one visit. Add a periodic checkpoint if that matters.
 
-chrome.idle.setDetectionInterval(60);
+const IDLE_SECONDS = 60;
+chrome.idle.setDetectionInterval(IDLE_SECONDS);
 
 // Events can fire concurrently; handlers touch shared storage, so run them one at a time.
 let chain = Promise.resolve();
@@ -169,8 +170,23 @@ chrome.tabs.onActivated.addListener(({ tabId }) =>
   serial(async () => startFor(await chrome.tabs.get(tabId)))
 );
 
+// True when the browser is the app in front and nothing has touched the keyboard or mouse for a while.
+async function idleInBrowser() {
+  const win = await chrome.windows.getLastFocused();
+  return !!win?.focused && (await chrome.idle.queryState(IDLE_SECONDS)) === "idle";
+}
+
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
   if (tab.active && changeInfo.status === "complete") serial(() => startFor(tab));
+  // Watching a video or listening to something without touching the keyboard still counts: while you are idle at the
+  // browser, sound in the tab in front keeps the visit going, and when the sound stops the visit ends right then.
+  // (While you are active, sound changes mean nothing: activity already counts.)
+  if (tab.active && "audible" in changeInfo) {
+    serial(async () => {
+      if (!(await idleInBrowser())) return;
+      return tab.audible ? startFor(tab) : closeCurrent();
+    });
+  }
 });
 
 chrome.tabs.onRemoved.addListener((tabId) =>
@@ -184,8 +200,17 @@ chrome.windows.onFocusChanged.addListener((windowId) =>
   serial(() => (windowId === chrome.windows.WINDOW_ID_NONE ? closeCurrent() : followActiveTab()))
 );
 
+// Idle means no input for IDLE_SECONDS, which is exactly what watching a video looks like. If the tab in front is
+// playing sound the visit carries on; a silent tab, or a locked screen, ends it (the time up to the idle moment counts).
 chrome.idle.onStateChanged.addListener((state) =>
-  serial(() => (state === "active" ? followActiveTab() : closeCurrent()))
+  serial(async () => {
+    if (state === "active") return followActiveTab();
+    if (state === "idle") {
+      const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+      if (tab?.audible) return;
+    }
+    return closeCurrent();
+  })
 );
 
 // Messages from the dashboard (the only origin allowed by externally_connectable in the manifest).
