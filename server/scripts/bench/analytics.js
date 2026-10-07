@@ -2,7 +2,7 @@
 //   node scripts/bench/analytics.js legacy|new [--runs 30] [--explain timeSpentToday]
 // Reports server-side execution time (EXPLAIN ANALYZE), which excludes network and driver overhead.
 import db from "../../db.js";
-import { SQL } from "../../models/analyticsModel.js";
+import { SQL } from "./rewritten.js";
 import { LEGACY } from "./legacy.js";
 
 const mode = process.argv[2];

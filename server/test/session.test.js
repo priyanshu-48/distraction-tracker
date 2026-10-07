@@ -181,7 +181,8 @@ describe("the extension's token", () => {
     ["GET", "/api/auth/me"],
     ["POST", "/api/auth/logout"],
     ["POST", "/api/auth/extension-token"],
-    ["GET", "/api/analytics/time-spent-today"],
+    ["GET", "/api/notifications/settings"],
+    ["PUT", "/api/notifications/settings", { enabled: false }],
   ])("cannot %s %s (403)", async (method, url, body) => {
     const user = await makeUser();
     const ext = bearer(await extensionToken(user));
