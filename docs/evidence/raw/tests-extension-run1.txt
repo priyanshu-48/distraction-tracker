@@ -1,0 +1,81 @@
+▶ recording visits
+  ✔ uploads the visit you leave, with its real length and without the tab id (101.4338ms)
+  ✔ ignores a visit shorter than a second (108.3378ms)
+  ✔ never records the dashboard, but does record other localhost pages (171.9671ms)
+  ✔ does not record browser pages (77.1796ms)
+Upload failed, will retry: Failed to fetch
+  ✔ keeps visits while offline and uploads each exactly once when back online (171.8329ms)
+  ✔ closes and uploads the open visit when the server says tracking stopped (108.6914ms)
+  ✔ treats a 401 as logged out: forgets the token, keeps the queued visits (107.5878ms)
+✔ recording visits (848.5892ms)
+▶ one visit is one stay on a site
+  ✔ does not start a new visit when the URL changes inside the site (YouTube, X and other single-page apps) (202.8254ms)
+  ✔ treats a page reload or a query-string change as the same visit (140.1082ms)
+  ✔ treats www and the bare domain as the same site (140.6408ms)
+  ✔ carries the visit over to another tab on the same site, and closing the old tab does not end it (155.8475ms)
+  ✔ still starts a new visit when you move to a different site in the same tab (139.0143ms)
+  ✔ counts leaving a site and coming back as two visits (154.958ms)
+  ✔ keeps different subdomains apart: docs.google.com and mail.google.com are different sites (141.8516ms)
+  ✔ still ends the visit when the browser loses focus, however much you navigated before (155.3972ms)
+  ✔ still never records the dashboard, even when it is the same host as nothing else (109.8021ms)
+✔ one visit is one stay on a site (1341.3333ms)
+▶ watching or listening without touching the keyboard
+  ✔ keeps counting when you go idle while the tab in front is playing sound, as one visit (184.5923ms)
+  ✔ still ends the visit when you go idle on a silent tab, counting up to that moment (109.0365ms)
+  ✔ ends the visit when the screen is locked, even with sound playing (126.4114ms)
+  ✔ ignores sound changes on a locked screen: nobody is there (139.9255ms)
+  ✔ ends the visit at the moment the sound stops while you are idle, not at your next input (171.908ms)
+  ✔ starts counting again when sound starts while you are idle (the next video in a playlist) (157.1511ms)
+  ✔ ignores sound starting and stopping while you are active (141.0623ms)
+  ✔ ignores sound in a tab that is not the one in front (139.6288ms)
+  ✔ ignores sound while the browser is not the app in front (139.1803ms)
+  ✔ does not start counting on sound once the session has been stopped (139.4592ms)
+Failed to fetch tracking status: TypeError: Failed to fetch
+    at globalThis.fetch (file:///C:/Users/Priyanshu%20Singh/AppData/Local/Temp/tmp.gpJuZfi7JQ/dt/extension/test/background.test.mjs:82:31)
+    at refreshTracking (file:///C:/Users/PRIYAN%7E1/AppData/Local/Temp/dt-background-19428-31.mjs:129:25)
+    at async SET_TOKEN (file:///C:/Users/PRIYAN%7E1/AppData/Local/Temp/dt-background-19428-31.mjs:249:5)
+    at async file:///C:/Users/PRIYAN%7E1/AppData/Local/Temp/dt-background-19428-31.mjs:294:35
+Upload failed, will retry: Failed to fetch
+  ✔ never records the dashboard, even when it is playing sound (172.3357ms)
+✔ watching or listening without touching the keyboard (1621.6995ms)
+▶ messages from the dashboard
+  ✔ stores a valid token and marks the account connected (42.3996ms)
+  ✔ rejects a token it cannot read, without touching what it has (41.0939ms)
+  ✔ drops the previous user's queued visits when a different account connects (39.3751ms)
+  ✔ keeps the queue when the same account reconnects (it happens on every dashboard load) (41.8989ms)
+  ✔ answers PING with its state so the dashboard can show it (115.9037ms)
+  ✔ on LOGOUT uploads the open visit, then forgets the account (78.1851ms)
+  ✔ on TRACKING_CHANGED after Stop, ends the visit in progress at once, without waiting for the poll (77.841ms)
+Failed to fetch tracking status: TypeError: Failed to fetch
+    at globalThis.fetch (file:///C:/Users/Priyanshu%20Singh/AppData/Local/Temp/tmp.gpJuZfi7JQ/dt/extension/test/background.test.mjs:82:31)
+    at refreshTracking (file:///C:/Users/PRIYAN%7E1/AppData/Local/Temp/dt-background-19428-36.mjs:129:25)
+    at async TRACKING_CHANGED (file:///C:/Users/PRIYAN%7E1/AppData/Local/Temp/dt-background-19428-36.mjs:257:22)
+    at async file:///C:/Users/PRIYAN%7E1/AppData/Local/Temp/dt-background-19428-36.mjs:294:35
+  ✔ on TRACKING_CHANGED after Start, begins following the tab you are on (109.3399ms)
+  ✔ on TRACKING_CHANGED keeps its last known state if the server cannot be reached, and still answers (36.7968ms)
+  ✔ on TRACKING_CHANGED with no account connected, answers that nothing is being tracked (31.2113ms)
+Upload failed, will retry: Failed to fetch
+  ✔ on TRACKING_CHANGED uploads anything waiting in the queue (100.7328ms)
+  ✔ warns when the server dropped visits recorded outside a session, and still clears the queue (108.6233ms)
+  ✔ ignores messages it does not know (37.9334ms)
+✔ messages from the dashboard (862.1318ms)
+▶ budget alerts from the server
+  ✔ shows one Chrome notification per alert, with the server's title and text and the extension's icon (70.7583ms)
+  ✔ shows each alert once: the next poll has nothing new (108.5905ms)
+  ✔ shows several in order, but never more than three at once (77.2704ms)
+  ✔ shows nothing when there are no alerts (77.1954ms)
+  ✔ keeps tracking state correct while showing alerts (76.7773ms)
+  ✔ copes with malformed alerts without breaking the poll (78.5454ms)
+  ✔ is not stopped by Chrome refusing to show a notification (63.9757ms)
+  ✔ works in a browser that has no notifications API (80.2434ms)
+  ✔ shows nothing for a signed-out extension, which never asks the server (78.7223ms)
+  ✔ does not show alerts from an error answer (78.3176ms)
+✔ budget alerts from the server (791.321ms)
+ℹ tests 50
+ℹ suites 5
+ℹ pass 50
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 5633.5983

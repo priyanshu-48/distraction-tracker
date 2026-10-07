@@ -1,0 +1,28 @@
+caught    token version is not compared (logout does not revoke) -> Tests  3 failed | 120 passed (123)
+caught    a token with no version is rejected (older tokens break) -> Tests  1 failed | 122 passed (123)
+caught    scope is not checked -> Tests  17 failed | 106 passed (123)
+caught    every route accepts the extension's token -> Tests  17 failed | 106 passed (123)
+caught    a token without a scope is treated as the limited one -> Tests  1 failed | 122 passed (123)
+caught    no CSRF check -> Tests  3 failed | 120 passed (123)
+caught    CSRF header demanded of bearer requests too -> Tests  53 failed | 70 passed (123)
+caught    CSRF header demanded on reads too -> Tests  2 failed | 121 passed (123)
+caught    the cookie wins over the bearer header -> Tests  1 failed | 122 passed (123)
+caught    a deleted account is not noticed -> Tests  5 failed | 118 passed (123)
+caught    the cookie is readable by scripts -> Tests  3 failed | 120 passed (123)
+caught    the cookie is SameSite=Lax -> Tests  3 failed | 120 passed (123)
+caught    the cookie is sent on every path -> Tests  4 failed | 119 passed (123)
+caught    Secure is never set -> Tests  1 failed | 122 passed (123)
+caught    logout does not revoke -> Tests  2 failed | 121 passed (123)
+NOT APPLIED: logout does not clear the cookie
+caught    the extension token is a full token -> Tests  19 failed | 104 passed (123)
+caught    the extension token expires in a day -> Tests  1 failed | 122 passed (123)
+NOT APPLIED: sign-in sets no cookie
+NOT APPLIED: deleting the account leaves the cookie
+NOT APPLIED: the internal token version is sent to the client
+caught    the extension cannot upload -> Tests  1 failed | 122 passed (123)
+caught    CORS does not allow credentials -> Tests  1 failed | 122 passed (123)
+
+unmutated baseline -> Tests  123 passed (123)
+19 of 23 mutations caught, 0 survived, 4 not applied
+(node:25312) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)

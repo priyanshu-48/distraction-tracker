@@ -1,0 +1,9 @@
+
+ RUN  v5.0.3 C:/Users/Priyanshu Singh/AppData/Local/Temp/tmp.gpJuZfi7JQ/dt/client
+
+
+ Test Files  21 passed (21)
+      Tests  365 passed (365)
+   Start at  00:31:15
+   Duration  11.54s (environment 49%, tests 26%, import 18%, transform 6%, setup 1%)
+

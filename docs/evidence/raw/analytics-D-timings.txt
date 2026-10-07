@@ -1,0 +1,11 @@
+mode=new rows=1000000 user=1 runs=15
+| query | p50 ms | p95 ms |
+|---|---:|---:|
+| timeSpentToday | 47.00 | 52.84 |
+| mostVisitedToday | 47.42 | 49.08 |
+| totalSwitchesToday | 46.36 | 58.64 |
+| todayCount | 45.17 | 47.33 |
+| todaySession | 0.02 | 0.03 |
+| timeSpentDaily | 68.11 | 73.68 |
+| tabSwitchesDaily | 68.05 | 72.33 |
+| **sum of p50** | **322.12** | |

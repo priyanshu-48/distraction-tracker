@@ -1,0 +1,8 @@
+rows=1000000 user=1 runs=30 (+3 warm-up) tz=Asia/Kolkata day=2026-09-28
+| request | p50 ms | p95 ms | max ms | response bytes |
+|---|---:|---:|---:|---:|
+| old Day view: 6 requests at once | 12.4 | 17.5 | 17.5 | 1205 |
+| old Day view: 6 requests one after another | 28.6 | 32.6 | 34.7 | 1205 |
+| new Day view: GET /summary | 36.7 | 46.7 | 52.6 | 3446 |
+| Week: GET /range | 43.2 | 47.1 | 47.7 | 1663 |
+| Month: GET /range | 86.9 | 91.9 | 93.0 | 4314 |
