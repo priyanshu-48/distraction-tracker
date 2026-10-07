@@ -63,3 +63,9 @@ export async function listAlerts(userId) {
 export async function dismissPendingAlerts(userId) {
   await db.query("UPDATE alerts SET delivered_at = NOW() WHERE user_id = $1 AND delivered_at IS NULL", [userId]);
 }
+
+/** Has this alert already been raised? A single indexed lookup, so a schedule can ask before doing any real work. */
+export async function alertExists(userId, dedupeKey) {
+  const { rowCount } = await db.query("SELECT 1 FROM alerts WHERE user_id = $1 AND dedupe_key = $2", [userId, dedupeKey]);
+  return rowCount > 0;
+}

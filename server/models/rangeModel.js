@@ -54,6 +54,9 @@ async function fetchDaily(userId, from, to, tz) {
   return rows;
 }
 
+/** Per-day totals for any date range (used by the scheduled alerts). Same query as the Week and Month views use. */
+export const getDailyTotals = fetchDaily;
+
 /** Distraction sites with their totals in the current period and in the previous one. */
 async function fetchSites(userId, current, previous, tz) {
   const { rows } = await db.query(
