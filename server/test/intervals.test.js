@@ -1,13 +1,13 @@
 import { describe, it, expect } from "vitest";
 import db from "../db.js";
-import { http, makeUser, interval } from "./helpers.js";
+import { http, makeTrackingUser, interval } from "./helpers.js";
 
 const upload = (user, intervals) => http().post("/api/intervals").set(user.auth).send({ intervals });
 const rowCount = async (userId) => Number((await db.query("SELECT COUNT(*) FROM tab_activity WHERE user_id = $1", [userId])).rows[0].count);
 
 describe("POST /api/intervals", () => {
   it("stores a batch and computes duration on the server", async () => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     const res = await upload(user, [interval({ seconds: 90 }), interval({ minsAgo: 20, seconds: 30 })]).expect(200);
     expect(res.body).toMatchObject({ received: 2, stored: 2 });
 
@@ -16,7 +16,7 @@ describe("POST /api/intervals", () => {
   });
 
   it("is idempotent: re-uploading the same batch stores nothing new", async () => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     const batch = [interval(), interval({ minsAgo: 20 })];
     await upload(user, batch).expect(200);
     const retry = await upload(user, batch).expect(200);
@@ -25,7 +25,7 @@ describe("POST /api/intervals", () => {
   });
 
   it("stores only the new intervals when a batch partly overlaps an earlier one", async () => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     const old = interval();
     await upload(user, [old]);
     const res = await upload(user, [old, interval({ minsAgo: 30 })]).expect(200);
@@ -34,16 +34,16 @@ describe("POST /api/intervals", () => {
   });
 
   it("scopes event ids per user", async () => {
-    const a = await makeUser("a");
-    const b = await makeUser("b");
+    const a = await makeTrackingUser("a");
+    const b = await makeTrackingUser("b");
     const shared = interval();
     expect((await upload(a, [shared])).body.stored).toBe(1);
     expect((await upload(b, [shared])).body.stored).toBe(1);
   });
 
   it("takes the owner from the token, ignoring any userId in the body", async () => {
-    const a = await makeUser("a");
-    const b = await makeUser("b");
+    const a = await makeTrackingUser("a");
+    const b = await makeTrackingUser("b");
     await http().post("/api/intervals").set(a.auth).send({ intervals: [{ ...interval(), userId: b.id }] }).expect(200);
     expect(await rowCount(a.id)).toBe(1);
     expect(await rowCount(b.id)).toBe(0);
@@ -63,19 +63,19 @@ describe("POST /api/intervals", () => {
     ["a missing domain", () => [interval({ domain: undefined })]],
     ["a non-ISO timestamp", () => [interval({ startedAt: "yesterday" })]],
   ])("rejects %s with 400 and stores nothing", async (_label, make) => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     await upload(user, make()).expect(400);
     expect(await rowCount(user.id)).toBe(0);
   });
 
   it("rejects a body that is not an intervals array", async () => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     await http().post("/api/intervals").set(user.auth).send({ intervals: "x" }).expect(400);
     await http().post("/api/intervals").set(user.auth).send({}).expect(400);
   });
 
   it("no longer serves the old start/end endpoints", async () => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     await http().post("/api/start-tab").set(user.auth).send({}).expect(404);
     await http().post("/api/end-tab").set(user.auth).send({}).expect(404);
   });

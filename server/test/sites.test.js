@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { readFileSync } from "node:fs";
 import db from "../db.js";
-import { http, makeUser, interval } from "./helpers.js";
+import { http, makeTrackingUser, interval } from "./helpers.js";
 
 const DAY = 1440; // minutes
 
@@ -22,12 +22,12 @@ describe("authentication", () => {
 
 describe("GET /api/sites", () => {
   it("is empty for a user with no data", async () => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     expect((await list(user)).body).toEqual({ days: 7, total: 0, sites: [] });
   });
 
   it("totals time and visits per site, most time first", async () => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     await upload(user, [
       visit("youtube.com", { seconds: 600 }),
       visit("youtube.com", { seconds: 300 }),
@@ -40,14 +40,14 @@ describe("GET /api/sites", () => {
   });
 
   it("only counts the requested window, in days", async () => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     await upload(user, [visit("recent.com", { daysAgo: 2 }), visit("old.com", { daysAgo: 10 })]);
     expect(domains(await list(user, { days: 7 }))).toEqual(["recent.com"]);
     expect(domains(await list(user, { days: 30 })).sort()).toEqual(["old.com", "recent.com"]);
   });
 
   it("labels checking habits and binges from the visit pattern", async () => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     await upload(user, [
       ...Array.from({ length: 10 }, () => visit("glance.com", { seconds: 20 })),
       visit("long.com", { seconds: 2000 }),
@@ -58,8 +58,8 @@ describe("GET /api/sites", () => {
   });
 
   it("keeps each user's data and marks separate", async () => {
-    const a = await makeUser("a");
-    const b = await makeUser("b");
+    const a = await makeTrackingUser("a");
+    const b = await makeTrackingUser("b");
     await upload(a, [visit("youtube.com")]);
     await mark(a, "youtube.com").expect(200);
     expect((await list(b)).body.sites).toEqual([]);
@@ -72,7 +72,7 @@ describe("GET /api/sites", () => {
 
 describe("marking sites", () => {
   it("marks and unmarks, and repeating either is harmless", async () => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     await upload(user, [visit("youtube.com")]);
 
     expect((await mark(user, "youtube.com").expect(200)).body).toEqual({ domain: "youtube.com", marked: true });
@@ -87,7 +87,7 @@ describe("marking sites", () => {
   });
 
   it("lists a marked site even when it has no visits in the window", async () => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     await mark(user, "never-visited.com").expect(200);
     const res = await list(user, { filter: "distractions" });
     expect(res.body.sites).toEqual([
@@ -96,7 +96,7 @@ describe("marking sites", () => {
   });
 
   it("treats www and capitalisation as the same site", async () => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     await upload(user, [visit("WWW.Reddit.com", { seconds: 100 }), visit("reddit.com", { seconds: 50 })]);
     await mark(user, "WWW.REDDIT.com").expect(200);
 
@@ -112,25 +112,25 @@ describe("marking sites", () => {
     ["www."],
     ["a".repeat(254)],
   ])("rejects the domain %j", async (domain) => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     await http().put(`/api/sites/${encodeURIComponent(domain)}`).set(user.auth).send({ marked: true }).expect(400);
   });
 
   it("rejects a body without a boolean `marked`", async () => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     await http().put("/api/sites/youtube.com").set(user.auth).send({}).expect(400);
     await http().put("/api/sites/youtube.com").set(user.auth).send({ marked: "yes" }).expect(400);
   });
 
   it("no longer serves the old POST /api/distraction-sites", async () => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     await http().post("/api/distraction-sites").set(user.auth).send({ domain: "youtube.com" }).expect(404);
   });
 });
 
 describe("filtering, searching, sorting and paging", () => {
   async function seeded() {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     await upload(user, [
       visit("youtube.com", { seconds: 900 }),
       visit("youtube.com", { seconds: 900 }),
@@ -185,14 +185,14 @@ describe("filtering, searching, sorting and paging", () => {
     ["a negative offset", { offset: -1 }],
     ["a very long search", { q: "x".repeat(101) }],
   ])("rejects %s with 400", async (_label, query) => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     await http().get("/api/sites").query(query).set(user.auth).expect(400);
   });
 });
 
 describe("time zones", () => {
   it("starts the window at the user's local midnight", async () => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     // 1 day ago in UTC is 'yesterday' for UTC, so a 1-day window excludes it everywhere it is clearly before local midnight.
     await upload(user, [visit("today.com", { daysAgo: 0 }), visit("twodays.com", { daysAgo: 2 })]);
     expect(domains(await list(user, { days: 7, tz: "Asia/Kolkata" })).sort()).toEqual(["today.com", "twodays.com"]);
@@ -202,7 +202,7 @@ describe("time zones", () => {
 
 describe("migration 005 (normalise existing domains)", () => {
   it("lower-cases and strips www, merging duplicate marks", async () => {
-    const user = await makeUser();
+    const user = await makeTrackingUser();
     // Insert un-normalised rows directly, the way data created before this change looks.
     await db.query(
       `INSERT INTO tab_activity (user_id, client_event_id, url, domain, title, started_at, ended_at, duration)

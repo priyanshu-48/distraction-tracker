@@ -1,6 +1,7 @@
 import request from "supertest";
 import { randomUUID } from "node:crypto";
 import app from "../app.js";
+import db from "../db.js";
 
 export const http = () => request(app);
 
@@ -13,6 +14,14 @@ export async function makeUser(label = "user") {
   await http().post("/api/auth/register").send({ email, password }).expect(201);
   const res = await http().post("/api/auth/login").send({ email, password }).expect(200);
   return { email, password, id: res.body.user.id, token: res.body.token, auth: { Authorization: `Bearer ${res.body.token}` } };
+}
+
+// A user with a tracking session that has been running for a long time (since 120 days ago), so any visit the test
+// uploads falls inside it. The server only keeps time that lies inside a session (decisions.md, D-23).
+export async function makeTrackingUser(label = "user") {
+  const user = await makeUser(label);
+  await db.query("INSERT INTO tracking_sessions (user_id, start_time) VALUES ($1, NOW() - INTERVAL '120 days')", [user.id]);
+  return user;
 }
 
 // A valid finished interval that started `minsAgo` minutes ago and lasted `seconds`.
