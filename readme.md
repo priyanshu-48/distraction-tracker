@@ -33,6 +33,7 @@
   - *What ate my time, and when?* Ranked sites with a "vs last week" change, a timeline of your sessions, and a weekday-by-hour heatmap.
   - *Is it a habit or a binge?* Many short visits are tagged as a checking habit, long ones as a binge.
   - *Am I getting better?* A like-for-like comparison with the previous period, streaks, and how soon after starting you slip.
+- **Your data is yours.** In Settings you can download everything as JSON (or just the visits as a CSV for a spreadsheet), delete your whole history, or delete your account. Deleting asks for your password.
 - **Works on a phone-sized screen**, and every chart has a text version for screen readers.
 
 ## Engineering highlights
@@ -43,8 +44,8 @@
 | **Fast on a lot of data** | Range predicates on a `(user_id, started_at)` index instead of functions on the column. | The original dashboard queries went from **1,176 ms to 5.7 ms (206x)** on 1M rows ([benchmark](docs/benchmarks/analytics-1m-rows.md)) |
 | **One request per screen** | `/api/summary` and `/api/range` return everything a Day, Week or Month view needs, from pure, tested functions plus a few bounded queries. | Day summary **48 ms** p50 on 1M rows; a week 44 to 64 ms, a month 86 to 212 ms for a deliberately extreme user ([Day](docs/benchmarks/day-summary.md), [Week/Month](docs/benchmarks/range-summary.md)) |
 | **Honest comparisons** | A week or month in progress is compared with the *same number of days* of the last one; a day with nothing tracked counts as missing, not as zero. | Pure functions with unit tests at every boundary |
-| **Tested, and the tests are checked** | Server tests run against a real throwaway PostgreSQL; the extension runs against a fake Chrome. Key rules were also verified by deliberately breaking them and confirming a test fails. | **667 tests** (315 server, 332 client, 20 extension); CI on every push |
-| **Privacy by default** | No third-party requests: site names and badges are computed locally (no favicon service). Data stays in your own database. | See [Privacy](#privacy) |
+| **Tested, and the tests are checked** | Server tests run against a real throwaway PostgreSQL; the extension runs against a fake Chrome. Key rules were also verified by deliberately breaking them and confirming a test fails. | **751 tests** (362 server, 349 client, 40 extension); CI on every push |
+| **Privacy by default** | No third-party requests: site names and badges are computed locally (no favicon service). Data stays in your own database, and you can export or delete it. The export streams in batches (bounded memory), and a CSV cell that starts like a spreadsheet formula is neutralised. | See [Privacy](#privacy) |
 
 Details of the trade-offs behind these are under [Design decisions](#design-decisions).
 
@@ -119,6 +120,8 @@ All routes are under `/api` and need a bearer token except sign-in, register and
 | `GET /range?view=week\|month&date=` | Everything the Week and Month views show |
 | `GET /sites`, `PUT /sites/:domain` | List sites with usage; mark or unmark one as a distraction |
 | `GET /settings`, `PUT /settings` | The daily distraction budget |
+| `GET /account/export?format=json\|csv` | Download everything (JSON) or the visits only (CSV), streamed |
+| `DELETE /account/data`, `DELETE /account` | Delete the history, or the whole account; both need the password in the body |
 | `GET /healthz` (no `/api` prefix) | Database check for orchestrators |
 
 Dates are the user's own calendar days; the browser's time zone is sent with each request and checked against PostgreSQL's time zone list.
@@ -144,7 +147,7 @@ GitHub Actions runs four jobs on every push and pull request: server tests (with
 
 ## Privacy
 
-Everything stays on your machine and in your own database. The extension sends visits only to the API you configure. It records the **full URL, domain and page title** of each tracked visit, only while a session is on, and never records the dashboard itself. There are no analytics, no third-party requests and no favicon lookups. Recording only the domain is a sensible next option.
+Everything stays on your machine and in your own database. The extension sends visits only to the API you configure. It records the **full URL, domain and page title** of each tracked visit, only while a session is on, and never records the dashboard itself. There are no analytics, no third-party requests and no favicon lookups. Recording only the domain is a sensible next option. In Settings, under **Your data**, you can download everything (JSON, or the visits as CSV), delete the history, or delete the account; deleting asks for your password, and a deleted account's login token stops working immediately.
 
 ## Known limitations
 
