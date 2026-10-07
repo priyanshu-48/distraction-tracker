@@ -22,3 +22,9 @@ export async function getRecipient(userId) {
   const { rows } = await db.query("SELECT email FROM users WHERE id = $1", [userId]);
   return { id: userId, email: rows[0].email };
 }
+
+/** Everyone who switched notifications on, with their time zone. */
+export async function optedInUsers() {
+  const { rows } = await db.query("SELECT user_id, time_zone FROM notification_settings WHERE enabled ORDER BY user_id");
+  return rows.map((row) => ({ userId: row.user_id, timeZone: row.time_zone }));
+}

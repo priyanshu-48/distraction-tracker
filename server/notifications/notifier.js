@@ -29,7 +29,9 @@ export function createNotifier({ env = process.env, client, log = logger } = {})
           await api.upsertUser(externalUserId, { email: user.email });
           registered.add(externalUserId);
         }
-        return await api.send({ externalUserId, type, payload: { title, body }, channels }, { idempotencyKey });
+        // An email takes its subject from the payload, so give it the title.
+        const payload = { title, body, ...(channels.includes("email") ? { subject: title } : {}) };
+        return await api.send({ externalUserId, type, payload, channels }, { idempotencyKey });
       } catch (error) {
         // Only the message and status: never the request body, which holds the user's email.
         log.warn({ reason: error?.message, status: error?.status }, "notification service call failed; alert not sent");

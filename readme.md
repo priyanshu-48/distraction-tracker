@@ -33,7 +33,7 @@
   - *What ate my time, and when?* Ranked sites with a "vs last week" change, a timeline of your sessions, and a weekday-by-hour heatmap.
   - *Is it a habit or a binge?* Many short visits are tagged as a checking habit, long ones as a binge.
   - *Am I getting better?* A like-for-like comparison with the previous period, streaks, and how soon after starting you slip.
-- **Optional budget alerts.** If the server is connected to a notification service and you switch it on in Settings, the extension shows a Chrome notification when you reach 80% of today's budget and when you pass it. Off by default; see [Privacy](#privacy).
+- **Optional alerts.** If the server is connected to a notification service and you switch it on in Settings, the extension shows a Chrome notification when you reach 80% of today's budget and when you pass it. Two more arrive on a schedule: a **weekly summary** on Monday morning (last week's distraction time, the change on the week before, days under budget, the biggest site; also sent as an email when the notification service has an email provider) and a message when you reach **3, 7, 14 or 30 days in a row under budget**. Off by default; see [Privacy](#privacy).
 - **Your data is yours.** In Settings you can download everything as JSON (or just the visits as a CSV for a spreadsheet), delete your whole history, or delete your account. Deleting asks for your password.
 - **Works on a phone-sized screen**, and every chart has a text version for screen readers.
 
@@ -160,7 +160,7 @@ By default everything stays on your machine and in your own database. The extens
 - The production client build takes about five minutes; the cause is not yet found.
 - Each of the 31 bars in the Month view is narrow on a phone; the Day view's date stepper is the fallback.
 - The server still contains the original `/api/analytics` endpoints, which the dashboard no longer calls.
-- Budget alerts appear as Chrome notifications within about 30 seconds (the extension's poll interval); this was checked in a real Chrome with the unpacked extension. The weekly summary, streak alerts and a live list of alerts in the dashboard are not built yet. Alerts use a hosted notification service. Erasure there is confirmed asynchronously: until it confirms (normally within seconds, longer if the service is down), the service still holds your data. Clicking a notification does nothing yet.
+- Budget alerts appear as Chrome notifications within about 30 seconds (the extension's poll interval); this was checked in a real Chrome with the unpacked extension. A live list of alerts in the dashboard is not built yet. The weekly summary and streak messages come from a check every 15 minutes while the server is running, each on the user's own clock (the time zone saved with the switch): the summary is due from Monday 09:00 until the end of Wednesday, and a server that is off for that whole window skips that week; a streak milestone is announced only on the morning after the day it is reached. Alerts use a hosted notification service. Erasure there is confirmed asynchronously: until it confirms (normally within seconds, longer if the service is down), the service still holds your data. Clicking a notification does nothing yet.
 
 ## Project structure
 
