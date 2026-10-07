@@ -14,6 +14,8 @@ const buttonVariants = cva(
         primary: "bg-coral text-coral-ink hover:bg-coral/90",
         secondary: "bg-raised text-ink hover:bg-raised/80",
         ghost: "text-ink hover:bg-raised/60",
+        // For actions that delete: outlined, so it never looks like the main button.
+        danger: "border border-coral text-coral hover:bg-coral/10",
       },
       size: {
         sm: "h-9 px-3 text-sm",
@@ -26,7 +28,7 @@ const buttonVariants = cva(
 );
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends React.ComponentProps<"button">, // includes `ref`, which React 19 passes as an ordinary prop
     VariantProps<typeof buttonVariants> {
   asChild?: boolean;
 }

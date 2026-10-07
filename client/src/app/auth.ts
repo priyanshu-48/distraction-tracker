@@ -46,6 +46,7 @@ export function errorMessage(error: unknown, fallback = "Something went wrong. P
     case 400:
       return "Please check the details you entered.";
     case 401:
+    case 403:
     case 409:
       return response.data?.message ?? fallback;
     case 429:

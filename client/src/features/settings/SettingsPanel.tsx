@@ -6,8 +6,9 @@ import { syncToken } from "@/lib/extension";
 import { ExtensionCard } from "@/features/setup/ExtensionCard";
 import { useExtensionState } from "@/features/setup/useSetupStatus";
 import { BudgetForm } from "./BudgetForm";
+import { DataCard } from "./DataCard";
 
-/** Settings panel. The time zone and data controls are added in Phase 5. */
+/** Settings panel: budget, the extension, your data (download or delete) and signing out. */
 export default function SettingsPanel() {
   const extension = useExtensionState();
   const needsReconnect = extension.data?.kind === "connected" && !(extension.data.report.hasToken && extension.data.report.authState === "ok");
@@ -28,6 +29,8 @@ export default function SettingsPanel() {
           Reconnect extension
         </Button>
       ) : null}
+
+      <DataCard />
 
       <Card>
         <CardTitle>Account</CardTitle>
