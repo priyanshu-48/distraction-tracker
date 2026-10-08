@@ -1,0 +1,218 @@
+--- plan: timeSpentToday ---
+Limit  (cost=26817.41..26817.42 rows=5 width=20) (actual time=43.471..45.832 rows=5 loops=1)
+  Buffers: shared hit=4493
+  ->  Sort  (cost=26817.41..26817.46 rows=19 width=20) (actual time=43.469..45.829 rows=5 loops=1)
+        Sort Key: (sum(tab_activity.duration)) DESC
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=4493
+        ->  Finalize GroupAggregate  (cost=26811.92..26817.09 rows=19 width=20) (actual time=43.433..45.819 rows=20 loops=1)
+              Group Key: tab_activity.domain
+              Buffers: shared hit=4493
+              ->  Gather Merge  (cost=26811.92..26816.71 rows=38 width=20) (actual time=43.423..45.804 rows=44 loops=1)
+                    Workers Planned: 2
+                    Workers Launched: 2
+                    Buffers: shared hit=4493
+                    ->  Partial GroupAggregate  (cost=25811.90..25812.30 rows=19 width=20) (actual time=40.854..40.865 rows=15 loops=3)
+                          Group Key: tab_activity.domain
+                          Buffers: shared hit=4493
+                          ->  Sort  (cost=25811.90..25811.97 rows=29 width=20) (actual time=40.839..40.842 rows=32 loops=3)
+                                Sort Key: tab_activity.domain
+                                Sort Method: quicksort  Memory: 26kB
+                                Buffers: shared hit=4493
+                                Worker 0:  Sort Method: quicksort  Memory: 25kB
+                                Worker 1:  Sort Method: quicksort  Memory: 26kB
+                                ->  Parallel Bitmap Heap Scan on tab_activity  (cost=6563.19..25811.19 rows=29 width=20) (actual time=10.675..40.780 rows=32 loops=3)
+                                      Recheck Cond: (user_id = 1)
+                                      Filter: ((started_at >= (date_trunc('day'::text, (now() AT TIME ZONE 'Asia/Kolkata'::text)) AT TIME ZONE 'Asia/Kolkata'::text)) AND (started_at < ((date_trunc('day'::text, (now() AT TIME ZONE 'Asia/Kolkata'::text)) + '1 day'::interval) AT TIME ZONE 'Asia/Kolkata'::text)))
+                                      Rows Removed by Filter: 66634
+                                      Heap Blocks: exact=1101
+                                      Buffers: shared hit=4477
+                                      ->  Bitmap Index Scan on uq_tab_activity_user_event  (cost=0.00..6563.18 rows=197700 width=0) (actual time=11.076..11.076 rows=200000 loops=1)
+                                            Index Cond: (user_id = 1)
+                                            Buffers: shared hit=1286
+Planning:
+  Buffers: shared hit=1
+Planning Time: 0.154 ms
+Execution Time: 45.941 ms
+
+--- plan: mostVisitedToday ---
+Limit  (cost=26817.41..26817.42 rows=5 width=20) (actual time=42.565..44.954 rows=5 loops=1)
+  Buffers: shared hit=4493
+  ->  Sort  (cost=26817.41..26817.46 rows=19 width=20) (actual time=42.563..44.951 rows=5 loops=1)
+        Sort Key: (count(*)) DESC
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=4493
+        ->  Finalize GroupAggregate  (cost=26811.92..26817.09 rows=19 width=20) (actual time=42.515..44.928 rows=20 loops=1)
+              Group Key: tab_activity.domain
+              Buffers: shared hit=4493
+              ->  Gather Merge  (cost=26811.92..26816.71 rows=38 width=20) (actual time=42.505..44.912 rows=44 loops=1)
+                    Workers Planned: 2
+                    Workers Launched: 2
+                    Buffers: shared hit=4493
+                    ->  Partial GroupAggregate  (cost=25811.90..25812.30 rows=19 width=20) (actual time=39.914..39.925 rows=15 loops=3)
+                          Group Key: tab_activity.domain
+                          Buffers: shared hit=4493
+                          ->  Sort  (cost=25811.90..25811.97 rows=29 width=12) (actual time=39.907..39.910 rows=32 loops=3)
+                                Sort Key: tab_activity.domain
+                                Sort Method: quicksort  Memory: 25kB
+                                Buffers: shared hit=4493
+                                Worker 0:  Sort Method: quicksort  Memory: 25kB
+                                Worker 1:  Sort Method: quicksort  Memory: 25kB
+                                ->  Parallel Bitmap Heap Scan on tab_activity  (cost=6563.19..25811.19 rows=29 width=12) (actual time=10.567..39.856 rows=32 loops=3)
+                                      Recheck Cond: (user_id = 1)
+                                      Filter: ((started_at >= (date_trunc('day'::text, (now() AT TIME ZONE 'Asia/Kolkata'::text)) AT TIME ZONE 'Asia/Kolkata'::text)) AND (started_at < ((date_trunc('day'::text, (now() AT TIME ZONE 'Asia/Kolkata'::text)) + '1 day'::interval) AT TIME ZONE 'Asia/Kolkata'::text)))
+                                      Rows Removed by Filter: 66634
+                                      Heap Blocks: exact=1102
+                                      Buffers: shared hit=4477
+                                      ->  Bitmap Index Scan on uq_tab_activity_user_event  (cost=0.00..6563.18 rows=197700 width=0) (actual time=10.915..10.916 rows=200000 loops=1)
+                                            Index Cond: (user_id = 1)
+                                            Buffers: shared hit=1286
+Planning:
+  Buffers: shared hit=1
+Planning Time: 0.128 ms
+Execution Time: 45.011 ms
+
+--- plan: totalSwitchesToday ---
+Finalize Aggregate  (cost=26811.48..26811.49 rows=1 width=8) (actual time=43.136..45.513 rows=1 loops=1)
+  Buffers: shared hit=4477
+  ->  Gather  (cost=26811.26..26811.47 rows=2 width=8) (actual time=42.991..45.505 rows=3 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        Buffers: shared hit=4477
+        ->  Partial Aggregate  (cost=25811.26..25811.27 rows=1 width=8) (actual time=40.492..40.494 rows=1 loops=3)
+              Buffers: shared hit=4477
+              ->  Parallel Bitmap Heap Scan on tab_activity  (cost=6563.19..25811.19 rows=29 width=0) (actual time=9.445..40.477 rows=32 loops=3)
+                    Recheck Cond: (user_id = 1)
+                    Filter: ((started_at >= (date_trunc('day'::text, (now() AT TIME ZONE 'Asia/Kolkata'::text)) AT TIME ZONE 'Asia/Kolkata'::text)) AND (started_at < ((date_trunc('day'::text, (now() AT TIME ZONE 'Asia/Kolkata'::text)) + '1 day'::interval) AT TIME ZONE 'Asia/Kolkata'::text)))
+                    Rows Removed by Filter: 66634
+                    Heap Blocks: exact=1095
+                    Buffers: shared hit=4477
+                    ->  Bitmap Index Scan on uq_tab_activity_user_event  (cost=0.00..6563.18 rows=197700 width=0) (actual time=10.610..10.610 rows=200000 loops=1)
+                          Index Cond: (user_id = 1)
+                          Buffers: shared hit=1286
+Planning:
+  Buffers: shared hit=1
+Planning Time: 0.137 ms
+Execution Time: 45.542 ms
+
+--- plan: todayCount ---
+Aggregate  (cost=26822.00..26822.01 rows=1 width=48) (actual time=44.567..47.031 rows=1 loops=1)
+  Buffers: shared hit=4477
+  CTE t
+    ->  Gather  (cost=7563.19..26818.19 rows=70 width=20) (actual time=10.946..46.871 rows=97 loops=1)
+          Workers Planned: 2
+          Workers Launched: 2
+          Buffers: shared hit=4477
+          ->  Parallel Bitmap Heap Scan on tab_activity  (cost=6563.19..25811.19 rows=29 width=20) (actual time=10.313..42.107 rows=32 loops=3)
+                Recheck Cond: (user_id = 1)
+                Filter: ((started_at >= (date_trunc('day'::text, (now() AT TIME ZONE 'Asia/Kolkata'::text)) AT TIME ZONE 'Asia/Kolkata'::text)) AND (started_at < ((date_trunc('day'::text, (now() AT TIME ZONE 'Asia/Kolkata'::text)) + '1 day'::interval) AT TIME ZONE 'Asia/Kolkata'::text)))
+                Rows Removed by Filter: 66634
+                Heap Blocks: exact=1072
+                Buffers: shared hit=4477
+                ->  Bitmap Index Scan on uq_tab_activity_user_event  (cost=0.00..6563.18 rows=197700 width=0) (actual time=10.110..10.111 rows=200000 loops=1)
+                      Index Cond: (user_id = 1)
+                      Buffers: shared hit=1286
+  InitPlan 2
+    ->  Limit  (cost=2.05..2.05 rows=1 width=40) (actual time=0.071..0.074 rows=1 loops=1)
+          ->  Sort  (cost=2.05..2.10 rows=20 width=40) (actual time=0.070..0.072 rows=1 loops=1)
+                Sort Key: (count(*)) DESC
+                Sort Method: top-N heapsort  Memory: 25kB
+                ->  HashAggregate  (cost=1.75..1.95 rows=20 width=40) (actual time=0.035..0.040 rows=20 loops=1)
+                      Group Key: t_1.domain
+                      Batches: 1  Memory Usage: 24kB
+                      ->  CTE Scan on t t_1  (cost=0.00..1.40 rows=70 width=32) (actual time=0.001..0.008 rows=97 loops=1)
+  ->  CTE Scan on t  (cost=0.00..1.40 rows=70 width=8) (actual time=10.950..44.461 rows=97 loops=1)
+        Buffers: shared hit=4477
+Planning:
+  Buffers: shared hit=1
+Planning Time: 0.179 ms
+Execution Time: 47.075 ms
+
+--- plan: todaySession ---
+Aggregate  (cost=8.33..8.34 rows=1 width=16) (actual time=0.011..0.011 rows=1 loops=1)
+  Buffers: shared hit=2
+  ->  Index Scan using idx_tracking_sessions_user_start on tracking_sessions  (cost=0.30..8.32 rows=1 width=16) (actual time=0.010..0.010 rows=0 loops=1)
+        Index Cond: ((user_id = 1) AND (start_time >= (date_trunc('day'::text, (now() AT TIME ZONE 'Asia/Kolkata'::text)) AT TIME ZONE 'Asia/Kolkata'::text)) AND (start_time < ((date_trunc('day'::text, (now() AT TIME ZONE 'Asia/Kolkata'::text)) + '1 day'::interval) AT TIME ZONE 'Asia/Kolkata'::text)))
+        Filter: (end_time IS NOT NULL)
+        Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=1
+Planning Time: 0.092 ms
+Execution Time: 0.026 ms
+
+--- plan: timeSpentDaily ---
+Merge Left Join  (cost=31947.91..33710.27 rows=109835 width=56) (actual time=70.453..70.461 rows=7 loops=1)
+  Merge Cond: ((generate_series(wk.mon, (wk.mon + '6 days'::interval), '1 day'::interval)) = agg.day)
+  Buffers: shared hit=4477
+  CTE wk
+    ->  Result  (cost=0.00..0.02 rows=1 width=8) (actual time=0.006..0.006 rows=1 loops=1)
+  ->  Sort  (cost=54.86..57.36 rows=1000 width=8) (actual time=0.013..0.016 rows=7 loops=1)
+        Sort Key: (generate_series(wk.mon, (wk.mon + '6 days'::interval), '1 day'::interval))
+        Sort Method: quicksort  Memory: 25kB
+        ->  ProjectSet  (cost=0.00..5.03 rows=1000 width=8) (actual time=0.009..0.011 rows=7 loops=1)
+              ->  CTE Scan on wk  (cost=0.00..0.02 rows=1 width=8) (actual time=0.007..0.008 rows=1 loops=1)
+  ->  Sort  (cost=31893.04..31947.96 rows=21967 width=24) (actual time=70.430..70.431 rows=4 loops=1)
+        Sort Key: agg.day
+        Sort Method: quicksort  Memory: 25kB
+        Buffers: shared hit=4477
+        ->  Subquery Scan on agg  (cost=29759.71..30308.88 rows=21967 width=24) (actual time=70.375..70.425 rows=4 loops=1)
+              Buffers: shared hit=4477
+              ->  HashAggregate  (cost=29759.71..30089.21 rows=21967 width=24) (actual time=70.374..70.423 rows=4 loops=1)
+                    Group Key: date_trunc('day'::text, (tab_activity.started_at AT TIME ZONE 'Asia/Kolkata'::text))
+                    Batches: 1  Memory Usage: 793kB
+                    Buffers: shared hit=4477
+                    ->  Nested Loop  (cost=6612.60..29594.96 rows=21967 width=16) (actual time=9.608..69.420 rows=6740 loops=1)
+                          Join Filter: ((tab_activity.started_at >= (wk_1.mon AT TIME ZONE 'Asia/Kolkata'::text)) AND (tab_activity.started_at < ((wk_1.mon + '7 days'::interval) AT TIME ZONE 'Asia/Kolkata'::text)))
+                          Rows Removed by Join Filter: 193260
+                          Buffers: shared hit=4477
+                          ->  CTE Scan on wk wk_1  (cost=0.00..0.02 rows=1 width=8) (actual time=0.000..0.001 rows=1 loops=1)
+                          ->  Bitmap Heap Scan on tab_activity  (cost=6612.60..25036.85 rows=197700 width=16) (actual time=9.588..24.988 rows=200000 loops=1)
+                                Recheck Cond: (user_id = 1)
+                                Heap Blocks: exact=3191
+                                Buffers: shared hit=4477
+                                ->  Bitmap Index Scan on uq_tab_activity_user_event  (cost=0.00..6563.18 rows=197700 width=0) (actual time=9.240..9.240 rows=200000 loops=1)
+                                      Index Cond: (user_id = 1)
+                                      Buffers: shared hit=1286
+Planning:
+  Buffers: shared hit=1
+Planning Time: 0.204 ms
+Execution Time: 70.564 ms
+
+--- plan: tabSwitchesDaily ---
+Merge Left Join  (cost=31947.91..33710.27 rows=109835 width=56) (actual time=68.768..68.776 rows=7 loops=1)
+  Merge Cond: ((generate_series(wk.mon, (wk.mon + '6 days'::interval), '1 day'::interval)) = agg.day)
+  Buffers: shared hit=4477
+  CTE wk
+    ->  Result  (cost=0.00..0.02 rows=1 width=8) (actual time=0.005..0.005 rows=1 loops=1)
+  ->  Sort  (cost=54.86..57.36 rows=1000 width=8) (actual time=0.013..0.016 rows=7 loops=1)
+        Sort Key: (generate_series(wk.mon, (wk.mon + '6 days'::interval), '1 day'::interval))
+        Sort Method: quicksort  Memory: 25kB
+        ->  ProjectSet  (cost=0.00..5.03 rows=1000 width=8) (actual time=0.009..0.012 rows=7 loops=1)
+              ->  CTE Scan on wk  (cost=0.00..0.02 rows=1 width=8) (actual time=0.006..0.007 rows=1 loops=1)
+  ->  Sort  (cost=31893.04..31947.96 rows=21967 width=24) (actual time=68.742..68.743 rows=4 loops=1)
+        Sort Key: agg.day
+        Sort Method: quicksort  Memory: 25kB
+        Buffers: shared hit=4477
+        ->  Subquery Scan on agg  (cost=29759.71..30308.88 rows=21967 width=24) (actual time=68.669..68.737 rows=4 loops=1)
+              Buffers: shared hit=4477
+              ->  HashAggregate  (cost=29759.71..30089.21 rows=21967 width=24) (actual time=68.668..68.735 rows=4 loops=1)
+                    Group Key: date_trunc('day'::text, (tab_activity.started_at AT TIME ZONE 'Asia/Kolkata'::text))
+                    Batches: 1  Memory Usage: 793kB
+                    Buffers: shared hit=4477
+                    ->  Nested Loop  (cost=6612.60..29594.96 rows=21967 width=16) (actual time=9.880..67.719 rows=6740 loops=1)
+                          Join Filter: ((tab_activity.started_at >= (wk_1.mon AT TIME ZONE 'Asia/Kolkata'::text)) AND (tab_activity.started_at < ((wk_1.mon + '7 days'::interval) AT TIME ZONE 'Asia/Kolkata'::text)))
+                          Rows Removed by Join Filter: 193260
+                          Buffers: shared hit=4477
+                          ->  CTE Scan on wk wk_1  (cost=0.00..0.02 rows=1 width=8) (actual time=0.000..0.002 rows=1 loops=1)
+                          ->  Bitmap Heap Scan on tab_activity  (cost=6612.60..25036.85 rows=197700 width=16) (actual time=9.859..24.920 rows=200000 loops=1)
+                                Recheck Cond: (user_id = 1)
+                                Heap Blocks: exact=3191
+                                Buffers: shared hit=4477
+                                ->  Bitmap Index Scan on uq_tab_activity_user_event  (cost=0.00..6563.18 rows=197700 width=0) (actual time=9.502..9.502 rows=200000 loops=1)
+                                      Index Cond: (user_id = 1)
+                                      Buffers: shared hit=1286
+Planning:
+  Buffers: shared hit=1
+Planning Time: 0.202 ms
+Execution Time: 68.900 ms
+

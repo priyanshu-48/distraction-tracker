@@ -1,0 +1,240 @@
+--- plan: timeSpentToday ---
+Limit  (cost=23109.49..23109.50 rows=5 width=20) (actual time=21.359..23.481 rows=5 loops=1)
+  Buffers: shared hit=3976
+  ->  Sort  (cost=23109.49..23109.54 rows=20 width=20) (actual time=21.358..23.478 rows=5 loops=1)
+        Sort Key: (sum(duration)) DESC
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=3976
+        ->  Finalize GroupAggregate  (cost=23100.88..23109.16 rows=20 width=20) (actual time=21.236..23.470 rows=20 loops=1)
+              Group Key: domain
+              Buffers: shared hit=3976
+              ->  Gather Merge  (cost=23100.88..23108.76 rows=40 width=20) (actual time=21.220..23.455 rows=60 loops=1)
+                    Workers Planned: 2
+                    Workers Launched: 2
+                    Buffers: shared hit=3976
+                    ->  Partial GroupAggregate  (cost=22100.85..22104.12 rows=20 width=20) (actual time=18.722..18.826 rows=20 loops=3)
+                          Group Key: domain
+                          Buffers: shared hit=3976
+                          ->  Sort  (cost=22100.85..22101.87 rows=409 width=20) (actual time=18.712..18.761 rows=613 loops=3)
+                                Sort Key: domain
+                                Sort Method: quicksort  Memory: 50kB
+                                Buffers: shared hit=3976
+                                Worker 0:  Sort Method: quicksort  Memory: 49kB
+                                Worker 1:  Sort Method: quicksort  Memory: 48kB
+                                ->  Parallel Bitmap Heap Scan on tab_activity  (cost=4495.67..22083.11 rows=409 width=20) (actual time=8.043..18.426 rows=613 loops=3)
+                                      Recheck Cond: (user_id = 1)
+                                      Filter: ((started_at)::date = CURRENT_DATE)
+                                      Rows Removed by Filter: 66054
+                                      Heap Blocks: exact=1135
+                                      Buffers: shared hit=3960
+                                      ->  Bitmap Index Scan on idx_tab_activity_user_started  (cost=0.00..4495.42 rows=196133 width=0) (actual time=9.653..9.653 rows=200000 loops=1)
+                                            Index Cond: (user_id = 1)
+                                            Buffers: shared hit=769
+Planning:
+  Buffers: shared hit=1
+Planning Time: 0.115 ms
+Execution Time: 23.511 ms
+
+--- plan: mostVisitedToday ---
+Limit  (cost=23109.49..23109.50 rows=5 width=20) (actual time=20.037..22.284 rows=5 loops=1)
+  Buffers: shared hit=3976
+  ->  Sort  (cost=23109.49..23109.54 rows=20 width=20) (actual time=20.036..22.282 rows=5 loops=1)
+        Sort Key: (count(*)) DESC
+        Sort Method: top-N heapsort  Memory: 25kB
+        Buffers: shared hit=3976
+        ->  Finalize GroupAggregate  (cost=23100.88..23109.16 rows=20 width=20) (actual time=19.933..22.273 rows=20 loops=1)
+              Group Key: domain
+              Buffers: shared hit=3976
+              ->  Gather Merge  (cost=23100.88..23108.76 rows=40 width=20) (actual time=19.911..22.254 rows=60 loops=1)
+                    Workers Planned: 2
+                    Workers Launched: 2
+                    Buffers: shared hit=3976
+                    ->  Partial GroupAggregate  (cost=22100.85..22104.12 rows=20 width=20) (actual time=17.711..17.780 rows=20 loops=3)
+                          Group Key: domain
+                          Buffers: shared hit=3976
+                          ->  Sort  (cost=22100.85..22101.87 rows=409 width=12) (actual time=17.700..17.725 rows=613 loops=3)
+                                Sort Key: domain
+                                Sort Method: quicksort  Memory: 25kB
+                                Buffers: shared hit=3976
+                                Worker 0:  Sort Method: quicksort  Memory: 25kB
+                                Worker 1:  Sort Method: quicksort  Memory: 25kB
+                                ->  Parallel Bitmap Heap Scan on tab_activity  (cost=4495.67..22083.11 rows=409 width=12) (actual time=7.828..17.525 rows=613 loops=3)
+                                      Recheck Cond: (user_id = 1)
+                                      Filter: ((started_at)::date = CURRENT_DATE)
+                                      Rows Removed by Filter: 66054
+                                      Heap Blocks: exact=1138
+                                      Buffers: shared hit=3960
+                                      ->  Bitmap Index Scan on idx_tab_activity_user_started  (cost=0.00..4495.42 rows=196133 width=0) (actual time=8.741..8.741 rows=200000 loops=1)
+                                            Index Cond: (user_id = 1)
+                                            Buffers: shared hit=769
+Planning:
+  Buffers: shared hit=1
+Planning Time: 0.093 ms
+Execution Time: 22.313 ms
+
+--- plan: totalSwitchesToday ---
+Finalize Aggregate  (cost=6926.80..6926.81 rows=1 width=8) (actual time=11.002..13.002 rows=1 loops=1)
+  Buffers: shared hit=772
+  ->  Gather  (cost=6926.58..6926.79 rows=2 width=8) (actual time=10.897..12.997 rows=3 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        Buffers: shared hit=772
+        ->  Partial Aggregate  (cost=5926.58..5926.59 rows=1 width=8) (actual time=8.389..8.389 rows=1 loops=3)
+              Buffers: shared hit=772
+              ->  Parallel Index Only Scan using idx_tab_activity_user_started on tab_activity  (cost=0.42..5925.56 rows=409 width=0) (actual time=8.272..8.357 rows=613 loops=3)
+                    Index Cond: (user_id = 1)
+                    Filter: ((started_at)::date = CURRENT_DATE)
+                    Rows Removed by Filter: 66054
+                    Heap Fetches: 0
+                    Buffers: shared hit=772
+Planning:
+  Buffers: shared hit=1
+Planning Time: 0.103 ms
+Execution Time: 13.028 ms
+
+--- plan: todayCount ---
+Finalize Aggregate  (cost=46194.64..46194.65 rows=1 width=48) (actual time=43.591..45.934 rows=1 loops=1)
+  Buffers: shared hit=7936
+  InitPlan 1
+    ->  Limit  (cost=23109.26..23109.26 rows=1 width=20) (actual time=22.009..24.163 rows=1 loops=1)
+          Buffers: shared hit=3976
+          ->  Sort  (cost=23109.26..23109.31 rows=20 width=20) (actual time=22.007..24.160 rows=1 loops=1)
+                Sort Key: (count(*)) DESC
+                Sort Method: top-N heapsort  Memory: 25kB
+                Buffers: shared hit=3976
+                ->  Finalize GroupAggregate  (cost=23100.88..23109.16 rows=20 width=20) (actual time=21.911..24.147 rows=20 loops=1)
+                      Group Key: tab_activity_1.domain
+                      Buffers: shared hit=3976
+                      ->  Gather Merge  (cost=23100.88..23108.76 rows=40 width=20) (actual time=21.897..24.131 rows=60 loops=1)
+                            Workers Planned: 2
+                            Workers Launched: 2
+                            Buffers: shared hit=3976
+                            ->  Partial GroupAggregate  (cost=22100.85..22104.12 rows=20 width=20) (actual time=19.267..19.336 rows=20 loops=3)
+                                  Group Key: tab_activity_1.domain
+                                  Buffers: shared hit=3976
+                                  ->  Sort  (cost=22100.85..22101.87 rows=409 width=12) (actual time=19.258..19.282 rows=613 loops=3)
+                                        Sort Key: tab_activity_1.domain
+                                        Sort Method: quicksort  Memory: 25kB
+                                        Buffers: shared hit=3976
+                                        Worker 0:  Sort Method: quicksort  Memory: 25kB
+                                        Worker 1:  Sort Method: quicksort  Memory: 25kB
+                                        ->  Parallel Bitmap Heap Scan on tab_activity tab_activity_1  (cost=4495.67..22083.11 rows=409 width=12) (actual time=8.403..19.079 rows=613 loops=3)
+                                              Recheck Cond: (user_id = 1)
+                                              Filter: ((started_at)::date = CURRENT_DATE)
+                                              Rows Removed by Filter: 66054
+                                              Heap Blocks: exact=1102
+                                              Buffers: shared hit=3960
+                                              ->  Bitmap Index Scan on idx_tab_activity_user_started  (cost=0.00..4495.42 rows=196133 width=0) (actual time=10.042..10.042 rows=200000 loops=1)
+                                                    Index Cond: (user_id = 1)
+                                                    Buffers: shared hit=769
+  ->  Gather  (cost=23085.15..23085.36 rows=2 width=16) (actual time=21.126..21.756 rows=3 loops=1)
+        Workers Planned: 2
+        Workers Launched: 2
+        Buffers: shared hit=3960
+        ->  Partial Aggregate  (cost=22085.15..22085.16 rows=1 width=16) (actual time=18.920..18.921 rows=1 loops=3)
+              Buffers: shared hit=3960
+              ->  Parallel Bitmap Heap Scan on tab_activity  (cost=4495.67..22083.11 rows=409 width=8) (actual time=8.124..18.859 rows=613 loops=3)
+                    Recheck Cond: (user_id = 1)
+                    Filter: ((started_at)::date = CURRENT_DATE)
+                    Rows Removed by Filter: 66054
+                    Heap Blocks: exact=1195
+                    Buffers: shared hit=3960
+                    ->  Bitmap Index Scan on idx_tab_activity_user_started  (cost=0.00..4495.42 rows=196133 width=0) (actual time=9.609..9.610 rows=200000 loops=1)
+                          Index Cond: (user_id = 1)
+                          Buffers: shared hit=769
+Planning:
+  Buffers: shared hit=2
+Planning Time: 0.147 ms
+Execution Time: 45.984 ms
+
+--- plan: todaySession ---
+Aggregate  (cost=24.71..24.72 rows=1 width=16) (actual time=0.047..0.048 rows=1 loops=1)
+  Buffers: shared hit=4
+  ->  Bitmap Heap Scan on tracking_sessions  (cost=10.30..24.70 rows=1 width=16) (actual time=0.027..0.045 rows=3 loops=1)
+        Recheck Cond: (user_id = 1)
+        Filter: ((end_time IS NOT NULL) AND ((start_time)::date = CURRENT_DATE))
+        Rows Removed by Filter: 267
+        Heap Blocks: exact=2
+        Buffers: shared hit=4
+        ->  Bitmap Index Scan on idx_tracking_sessions_user_start  (cost=0.00..10.30 rows=270 width=0) (actual time=0.012..0.012 rows=270 loops=1)
+              Index Cond: (user_id = 1)
+              Buffers: shared hit=2
+Planning:
+  Buffers: shared hit=1
+Planning Time: 0.050 ms
+Execution Time: 0.059 ms
+
+--- plan: timeSpentDaily ---
+GroupAggregate  (cost=43618.57..66184.87 rows=200 width=44) (actual time=117.653..119.320 rows=7 loops=1)
+  Group Key: (((generate_series(((InitPlan 2).col1)::timestamp without time zone, ((InitPlan 3).col1 + '6 days'::interval), '1 day'::interval)))::date)
+  Buffers: shared hit=3960, temp read=736 written=739
+  CTE last_monday
+    ->  Result  (cost=0.00..0.03 rows=1 width=4) (actual time=0.005..0.005 rows=1 loops=1)
+  ->  Merge Left Join  (cost=43618.54..61278.01 rows=980665 width=12) (actual time=116.914..118.864 rows=6243 loops=1)
+        Merge Cond: ((((generate_series(((InitPlan 2).col1)::timestamp without time zone, ((InitPlan 3).col1 + '6 days'::interval), '1 day'::interval)))::date) = (date(tab_activity.started_at)))
+        Buffers: shared hit=3960, temp read=736 written=739
+        ->  Sort  (cost=74.89..77.39 rows=1000 width=4) (actual time=0.016..0.021 rows=7 loops=1)
+              Sort Key: (((generate_series(((InitPlan 2).col1)::timestamp without time zone, ((InitPlan 3).col1 + '6 days'::interval), '1 day'::interval)))::date)
+              Sort Method: quicksort  Memory: 25kB
+              ->  Result  (cost=0.04..25.06 rows=1000 width=4) (actual time=0.011..0.015 rows=7 loops=1)
+                    InitPlan 2
+                      ->  CTE Scan on last_monday  (cost=0.00..0.02 rows=1 width=4) (actual time=0.006..0.007 rows=1 loops=1)
+                    InitPlan 3
+                      ->  CTE Scan on last_monday last_monday_1  (cost=0.00..0.02 rows=1 width=4) (actual time=0.000..0.001 rows=1 loops=1)
+                    ->  ProjectSet  (cost=0.00..5.02 rows=1000 width=8) (actual time=0.010..0.012 rows=7 loops=1)
+                          ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.001 rows=1 loops=1)
+        ->  Materialize  (cost=43543.65..44524.32 rows=196133 width=16) (actual time=74.433..104.568 rows=200000 loops=1)
+              Buffers: shared hit=3960, temp read=736 written=739
+              ->  Sort  (cost=43543.65..44033.99 rows=196133 width=16) (actual time=74.430..88.789 rows=200000 loops=1)
+                    Sort Key: (date(tab_activity.started_at))
+                    Sort Method: external merge  Disk: 5888kB
+                    Buffers: shared hit=3960, temp read=736 written=739
+                    ->  Bitmap Heap Scan on tab_activity  (cost=4544.46..22949.12 rows=196133 width=16) (actual time=8.665..38.643 rows=200000 loops=1)
+                          Recheck Cond: (user_id = 1)
+                          Heap Blocks: exact=3191
+                          Buffers: shared hit=3960
+                          ->  Bitmap Index Scan on idx_tab_activity_user_started  (cost=0.00..4495.42 rows=196133 width=0) (actual time=8.314..8.314 rows=200000 loops=1)
+                                Index Cond: (user_id = 1)
+                                Buffers: shared hit=769
+Planning:
+  Buffers: shared hit=1
+Planning Time: 0.177 ms
+Execution Time: 121.384 ms
+
+--- plan: tabSwitchesDaily ---
+GroupAggregate  (cost=43618.57..66184.37 rows=200 width=44) (actual time=115.480..116.941 rows=7 loops=1)
+  Group Key: (((generate_series(((InitPlan 2).col1)::timestamp without time zone, ((InitPlan 3).col1 + '6 days'::interval), '1 day'::interval)))::date)
+  Buffers: shared hit=3960, temp read=736 written=739
+  CTE last_monday
+    ->  Result  (cost=0.00..0.03 rows=1 width=4) (actual time=0.005..0.005 rows=1 loops=1)
+  ->  Merge Left Join  (cost=43618.54..61278.01 rows=980665 width=8) (actual time=114.770..116.506 rows=6243 loops=1)
+        Merge Cond: ((((generate_series(((InitPlan 2).col1)::timestamp without time zone, ((InitPlan 3).col1 + '6 days'::interval), '1 day'::interval)))::date) = (date(tab_activity.started_at)))
+        Buffers: shared hit=3960, temp read=736 written=739
+        ->  Sort  (cost=74.89..77.39 rows=1000 width=4) (actual time=0.014..0.020 rows=7 loops=1)
+              Sort Key: (((generate_series(((InitPlan 2).col1)::timestamp without time zone, ((InitPlan 3).col1 + '6 days'::interval), '1 day'::interval)))::date)
+              Sort Method: quicksort  Memory: 25kB
+              ->  Result  (cost=0.04..25.06 rows=1000 width=4) (actual time=0.010..0.014 rows=7 loops=1)
+                    InitPlan 2
+                      ->  CTE Scan on last_monday  (cost=0.00..0.02 rows=1 width=4) (actual time=0.006..0.006 rows=1 loops=1)
+                    InitPlan 3
+                      ->  CTE Scan on last_monday last_monday_1  (cost=0.00..0.02 rows=1 width=4) (actual time=0.000..0.001 rows=1 loops=1)
+                    ->  ProjectSet  (cost=0.00..5.02 rows=1000 width=8) (actual time=0.009..0.011 rows=7 loops=1)
+                          ->  Result  (cost=0.00..0.01 rows=1 width=0) (actual time=0.000..0.001 rows=1 loops=1)
+        ->  Materialize  (cost=43543.65..44524.32 rows=196133 width=12) (actual time=72.759..102.471 rows=200000 loops=1)
+              Buffers: shared hit=3960, temp read=736 written=739
+              ->  Sort  (cost=43543.65..44033.99 rows=196133 width=12) (actual time=72.757..86.902 rows=200000 loops=1)
+                    Sort Key: (date(tab_activity.started_at))
+                    Sort Method: external merge  Disk: 5888kB
+                    Buffers: shared hit=3960, temp read=736 written=739
+                    ->  Bitmap Heap Scan on tab_activity  (cost=4544.46..22949.12 rows=196133 width=12) (actual time=9.521..38.867 rows=200000 loops=1)
+                          Recheck Cond: (user_id = 1)
+                          Heap Blocks: exact=3191
+                          Buffers: shared hit=3960
+                          ->  Bitmap Index Scan on idx_tab_activity_user_started  (cost=0.00..4495.42 rows=196133 width=0) (actual time=9.175..9.175 rows=200000 loops=1)
+                                Index Cond: (user_id = 1)
+                                Buffers: shared hit=769
+Planning:
+  Buffers: shared hit=1
+Planning Time: 0.145 ms
+Execution Time: 118.472 ms
+

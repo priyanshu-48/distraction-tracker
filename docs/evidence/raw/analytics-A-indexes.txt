@@ -1,0 +1,5 @@
+indexname
+idx_tab_activity_open
+tab_activity_pkey
+uq_tab_activity_user_event
+(3 rows)

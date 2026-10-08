@@ -1,5 +1,6 @@
-import db from "../db.js";
-
+// The analytics queries as they are after the rewrite (range predicates in the user's time zone on the
+// (user_id, started_at) index), kept only so the benchmark can reproduce the "after" numbers. The endpoints that
+// served them were removed; params: $1 user id, $2 IANA time zone name.
 // "Today" and "this week" are computed in the user's timezone ($2) but compared
 // against started_at as a plain range, so the (user_id, started_at) index is usable.
 // ponytail: tz comes from the client; an unknown zone name makes Postgres error (500).
@@ -60,22 +61,3 @@ export const SQL = {
     FROM days LEFT JOIN agg USING (day)
     ORDER BY days.day`,
 };
-
-const rows = async (sql, userId, tz) => (await db.query(sql, [userId, tz])).rows;
-
-export const timeSpentToday = (userId, tz) => rows(SQL.timeSpentToday, userId, tz);
-export const mostVisitedToday = (userId, tz) => rows(SQL.mostVisitedToday, userId, tz);
-export const todayCount = (userId, tz) => rows(SQL.todayCount, userId, tz);
-export const todaySession = (userId, tz) => rows(SQL.todaySession, userId, tz);
-
-export async function totalSwitchesToday(userId, tz) {
-  return parseInt((await rows(SQL.totalSwitchesToday, userId, tz))[0].total_switches);
-}
-
-export async function timeSpentDaily(userId, tz) {
-  return (await rows(SQL.week, userId, tz)).map(({ weekday, time_spent }) => ({ weekday, time_spent }));
-}
-
-export async function tabSwitchesDaily(userId, tz) {
-  return (await rows(SQL.week, userId, tz)).map(({ weekday, tab_switches }) => ({ weekday, tab_switches }));
-}

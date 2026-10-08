@@ -1,0 +1,2 @@
+rows=1000000 user=1 date=2026-09-28 tz=Asia/Kolkata visits that day=2149 runs=30
+day summary, wall time incl. driver: p50 44.7 ms, p95 51.6 ms, max 51.8 ms

@@ -1,0 +1,5 @@
+rows=1000000 user=1 tz=Asia/Kolkata runs=20
+week, 10 days back             7745 distraction visits  p50 46.1 ms, p95 51.6 ms, max 51.6 ms
+week, current                  3404 distraction visits  p50 41.7 ms, p95 48.6 ms, max 48.6 ms
+month, 35 days back           33355 distraction visits  p50 97.6 ms, p95 107.5 ms, max 107.5 ms
+month, current                 7820 distraction visits  p50 53.7 ms, p95 57.6 ms, max 57.6 ms

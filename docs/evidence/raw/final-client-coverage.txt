@@ -1,0 +1,73 @@
+
+ RUN  v5.0.3 C:/Projects/distraction-tracker/client
+      Coverage enabled with v8
+
+
+ Test Files  21 passed (21)
+      Tests  365 passed (365)
+   Start at  01:22:17
+   Duration  8.38s (tests 45%, environment 32%, import 12%, transform 8%, worker 2%, setup 1%)
+
+[34m % [39m[2mCoverage report from [22m[33mv8[39m
+-------------------|---------|----------|---------|---------|-------------------
+File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
+-------------------|---------|----------|---------|---------|-------------------
+All files          |    90.6 |    86.63 |   86.14 |      91 |                   
+ src               |       0 |        0 |       0 |       0 |                   
+  App.jsx          |       0 |        0 |       0 |       0 | 9-13              
+  api.js           |       0 |        0 |       0 |       0 | 3-28              
+  main.jsx         |       0 |      100 |     100 |       0 | 9                 
+ src/app           |   62.66 |    75.75 |      50 |   63.07 |                   
+  DesignPage.tsx   |       0 |        0 |       0 |       0 | 16-148            
+  ...TokenSync.tsx |       0 |        0 |       0 |       0 | 4-26              
+  auth.ts          |   95.91 |    92.59 |    90.9 |   97.61 | 113               
+ ...ponents/layout |      70 |      100 |      50 |   66.66 |                   
+  LogoutButton.tsx |      70 |      100 |      50 |   66.66 | 22-24             
+ src/components/ui |   96.87 |    82.92 |   95.45 |   96.66 |                   
+  button.tsx       |     100 |    66.66 |     100 |     100 | 37                
+  sheet.tsx        |     100 |       75 |     100 |     100 | 24                
+  stat-tile.tsx    |     100 |       50 |     100 |     100 | 17                
+  states.tsx       |     100 |       60 |     100 |     100 | 17-20,42          
+  tooltip.tsx      |      50 |      100 |       0 |      50 | 8                 
+ src/features/auth |   96.92 |    89.65 |     100 |   98.27 |                   
+  RegisterPage.tsx |   95.45 |    83.33 |     100 |   97.36 | 23                
+ ...ures/dashboard |      96 |    96.96 |   91.66 |   95.23 |                   
+  ...ardHeader.tsx |    87.5 |      100 |   83.33 |    87.5 | 33                
+  ...boardPage.tsx |    90.9 |    83.33 |   85.71 |   88.88 | 32                
+ src/features/day  |    98.7 |    90.24 |   95.65 |   98.46 |                   
+  DayTiles.tsx     |     100 |    83.33 |     100 |     100 | 16                
+  Hero.tsx         |     100 |    88.88 |     100 |     100 | 50,56             
+  ListCards.tsx    |   96.66 |    79.41 |   94.44 |   96.15 | 55                
+  Timeline.tsx     |      90 |    78.12 |   81.81 |   89.47 | 46,70             
+  timelineModel.ts |     100 |    95.23 |     100 |     100 | 36,126,143        
+ ...features/range |     100 |    97.94 |     100 |     100 |                   
+  RangeCards.tsx   |     100 |     92.3 |     100 |     100 | 28-34             
+  RangeHero.tsx    |     100 |     87.5 |     100 |     100 | 41                
+ ...atures/session |   93.75 |      100 |    87.5 |   93.33 |                   
+  ...onControl.tsx |   85.71 |      100 |      50 |   83.33 | 21                
+ ...tures/settings |   98.14 |    94.91 |    97.5 |   98.03 |                   
+  DataCard.tsx     |     100 |    96.42 |     100 |     100 | 75                
+  ...tionsCard.tsx |     100 |    83.33 |     100 |     100 | 16                
+  ...ingsPanel.tsx |      60 |    83.33 |      50 |      60 | 25-26             
+ ...features/setup |   85.96 |    83.33 |   83.33 |   85.71 |                   
+  ...nsionCard.tsx |     100 |    55.55 |     100 |     100 | 16-30             
+  ...Checklist.tsx |   68.18 |       84 |   66.66 |   68.42 | 16-23,40,56-57,77 
+  ...etupStatus.ts |   91.66 |      100 |      80 |   91.66 | 47                
+ ...features/sites |   68.42 |       35 |   47.05 |   72.85 |                   
+  AddSiteForm.tsx  |   41.66 |     37.5 |      25 |      50 | 20-33             
+  SiteRow.tsx      |      40 |        0 |       0 |      40 | 21-55             
+  SitesManager.tsx |   68.75 |    43.75 |   30.76 |      70 | 68-86,105-156     
+  queries.ts       |   78.94 |       20 |   66.66 |   88.23 | 41,46             
+ src/lib           |   96.08 |    91.96 |   94.73 |   97.22 |                   
+  extension.ts     |     100 |     87.5 |     100 |     100 | 55-59             
+  hooks.ts         |   85.71 |      100 |      75 |     100 |                   
+  queryClient.ts   |   68.75 |        0 |      50 |   73.33 | 19-23             
+  siteInfo.ts      |   96.66 |    81.81 |     100 |     100 | 90,131            
+-------------------|---------|----------|---------|---------|-------------------
+
+=============================== Coverage summary ===============================
+Statements   : 90.6% ( 964/1064 )
+Branches     : 86.63% ( 700/808 )
+Functions    : 86.14% ( 311/361 )
+Lines        : 91% ( 830/912 )
+================================================================================

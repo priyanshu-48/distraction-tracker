@@ -1,0 +1,12 @@
+caught   api.js | withCredentials: true, -> Tests  1 failed | 20 passed (21)
+caught   api.js | !== 'get') config.headers['X-Requested-With'] -> Tests  4 failed | 17 passed (21)
+caught   api.js | config.method || 'get').toLowerCase() !== 'ge -> Tests  5 failed | 16 passed (21)
+caught   api.js | ['/sites', '/summary', '/range'] -> Tests  1 failed | 20 passed (21)
+caught   api.js | && !err.config.url.startsWith('/auth/') -> Tests  2 failed | 19 passed (21)
+caught   api.js | err.response?.status === 401 -> Tests  2 failed | 19 passed (21)
+caught   ExtensionTokenSync.tsx | Date.now() - last < MIN_GAP_MS -> Tests  1 failed | 20 passed (21)
+caught   ExtensionTokenSync.tsx | if (!signedIn) return; -> Tests  2 failed | 19 passed (21)
+caught   ExtensionTokenSync.tsx | return () => window.removeEventListener("focu -> Tests  2 failed | 19 passed (21)
+caught   ExtensionTokenSync.tsx | window.addEventListener("focus", sync); -> Tests  1 failed | 20 passed (21)
+(node:22096) [DEP0190] DeprecationWarning: Passing args to a child process with shell option true can lead to security vulnerabilities, as the arguments are not escaped, only concatenated.
+(Use `node --trace-deprecation ...` to show where the warning was created)

@@ -42,10 +42,10 @@
 | | What was built | Evidence |
 |---|---|---|
 | **Correct data, even when things go wrong** | The extension records each visit as one finished interval with a client-generated UUID, queues it, and uploads batches; the server ignores ids it has seen, so a retry never double-counts. The server also keeps **only time that falls inside a tracking session**, cutting a visit at Stop and dropping one recorded after it, so correctness never depends on the extension noticing Stop in time. | Idempotent `POST /api/intervals`; 18 tests with fixed clocks, including boundaries and retries |
-| **Fast on a lot of data** | Range predicates on a `(user_id, started_at)` index instead of functions on the column. | The original dashboard queries went from **1,176 ms to 5.7 ms (206x)** on 1M rows ([benchmark](docs/benchmarks/analytics-1m-rows.md)) |
+| **Fast on a lot of data** | Range predicates on a `(user_id, started_at)` index instead of functions on the column. | The original dashboard queries went from about **396 ms to 12 ms (33x)** on 1M synthetic rows, re-measured on PostgreSQL 17 in Docker; the index and the rewrite only work together ([benchmark](docs/benchmarks/analytics-1m-rows.md)) |
 | **One request per screen** | `/api/summary` and `/api/range` return everything a Day, Week or Month view needs, from pure, tested functions plus a few bounded queries. | Day summary **48 ms** p50 on 1M rows; a week 44 to 64 ms, a month 86 to 212 ms for a deliberately extreme user ([Day](docs/benchmarks/day-summary.md), [Week/Month](docs/benchmarks/range-summary.md)) |
 | **Honest comparisons** | A week or month in progress is compared with the *same number of days* of the last one; a day with nothing tracked counts as missing, not as zero. | Pure functions with unit tests at every boundary |
-| **Tested, and the tests are checked** | Server tests run against a real throwaway PostgreSQL; the extension runs against a fake Chrome. Key rules were also verified by deliberately breaking them and confirming a test fails. | **751 tests** (362 server, 349 client, 40 extension); CI on every push |
+| **Tested, and the tests are checked** | Server tests run against a real throwaway PostgreSQL; the extension runs against a fake Chrome. Key rules were also verified by deliberately breaking them and confirming a test fails. | **991 tests** (553 server, 386 client, 52 extension), about 95% line coverage on the server and 94% on the client ([evidence](docs/RESUME_EVIDENCE.md)); CI on every push |
 | **Privacy by default** | No third-party requests: site names and badges are computed locally (no favicon service). Data stays in your own database, and you can export or delete it. The export streams in batches (bounded memory), and a CSV cell that starts like a spreadsheet formula is neutralised. | See [Privacy](#privacy) |
 
 Details of the trade-offs behind these are under [Design decisions](#design-decisions).
@@ -116,7 +116,9 @@ All routes are under `/api` and need a login (the dashboard's httpOnly cookie, o
 
 | Method and path | Purpose |
 |---|---|
-| `POST /auth/register`, `POST /auth/login` | Create an account, sign in |
+| `POST /auth/register`, `POST /auth/login` | Create an account, sign in (sets the httpOnly session cookie) |
+| `GET /auth/me`, `POST /auth/logout` | Who is signed in; sign out (ends the dashboard and extension logins) |
+| `POST /auth/extension-token` | A limited token for the extension (can only upload visits and read the tracking state) |
 | `POST /start-tracking`, `POST /stop-tracking`, `GET /is-tracking` | Start, stop and read the tracking session |
 | `POST /intervals` | Upload finished visits (idempotent, cut to the session window) |
 | `GET /summary?date=` | Everything the Day view shows |
@@ -157,9 +159,8 @@ By default everything stays on your machine and in your own database. The extens
 
 - Chromium browsers only (Chrome, Brave, Edge); the dashboard URL and API URL are fixed to localhost.
 - A single daily budget and a per-site mark; no per-site limits or blocking.
-- The production client build takes about five minutes; the cause is not yet found.
+- The production client build takes about six minutes (331 to 369 s over three runs on a 20-thread laptop); the cause is not yet found.
 - Each of the 31 bars in the Month view is narrow on a phone; the Day view's date stepper is the fallback.
-- The server still contains the original `/api/analytics` endpoints, which the dashboard no longer calls.
 - Budget alerts appear as Chrome notifications within about 30 seconds (the extension's poll interval); this was checked in a real Chrome with the unpacked extension. A live list of alerts in the dashboard is not built yet. The weekly summary and streak messages come from a check every 15 minutes while the server is running, each on the user's own clock (the time zone saved with the switch): the summary is due from Monday 09:00 until the end of Wednesday, and a server that is off for that whole window skips that week; a streak milestone is announced only on the morning after the day it is reached. Alerts use a hosted notification service. Erasure there is confirmed asynchronously: until it confirms (normally within seconds, longer if the service is down), the service still holds your data. Clicking a notification does nothing yet.
 
 ## Project structure

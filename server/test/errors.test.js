@@ -24,7 +24,7 @@ describe("error handling", () => {
   it("hides internals on a 500 but returns a request id to quote", async () => {
     const user = await makeUser();
     vi.spyOn(db, "query").mockRejectedValueOnce(new Error("secret db detail at /srv/app/models/x.js"));
-    const res = await http().get("/api/analytics/total-switches-today").set(user.auth).expect(500);
+    const res = await http().get("/api/settings").set(user.auth).expect(500);
 
     expect(res.body).toMatchObject({ error: "Internal server error", message: "Something went wrong" });
     expect(res.body.requestId).toBe(res.headers["x-request-id"]);

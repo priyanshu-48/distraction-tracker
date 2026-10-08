@@ -77,7 +77,7 @@ async function createWorld() {
   };
 
   // `alerts` are handed over once, like the real server does: answering the poll empties them.
-  const server = { tracking: true, online: true, status: 200, uploads: [], rejected: 0, alerts: [] };
+  const server = { tracking: true, online: true, status: 200, uploads: [], batches: [], failAfterBatches: null, rejected: 0, alerts: [] };
   globalThis.fetch = async (url, options = {}) => {
     if (!server.online) throw new TypeError("Failed to fetch");
     if (url.includes("/is-tracking")) {
@@ -88,8 +88,14 @@ async function createWorld() {
       };
     }
     if (url.endsWith("/intervals")) {
-      if (server.status === 200) server.uploads.push(...JSON.parse(options.body).intervals);
-      return { ok: server.status === 200, status: server.status, text: async () => "", json: async () => ({ success: true, rejected: server.rejected }) };
+      const intervals = JSON.parse(options.body).intervals;
+      // `failAfterBatches`: the server accepts that many batches, then answers 500 (a failure part-way through a backlog).
+      const status = server.failAfterBatches !== null && server.batches.length >= server.failAfterBatches ? 500 : server.status;
+      if (status === 200) {
+        server.uploads.push(...intervals);
+        server.batches.push(intervals.length);
+      }
+      return { ok: status === 200, status, text: async () => "", json: async () => ({ success: true, rejected: server.rejected }) };
     }
     throw new Error(`unexpected request ${url}`);
   };
@@ -202,6 +208,31 @@ describe("recording visits", () => {
     await world.fire("alarm", { name: "poll" });
     await world.fire("alarm", { name: "poll" });
     assert.equal(world.server.uploads.filter((v) => v.clientEventId === queued[0].clientEventId).length, 1);
+    assert.equal((await world.local.get("queue")).queue.length, 0);
+  });
+
+  it("uploads a long backlog in batches of 50, oldest first", async () => {
+    const ids = Array.from({ length: 120 }, (_, i) => `visit-${i}`);
+    await world.local.set({ queue: ids.map((clientEventId) => ({ clientEventId })) });
+    await world.fire("alarm", { name: "poll" });
+    assert.deepEqual(world.server.batches, [50, 50, 20]);
+    assert.deepEqual(world.server.uploads.map((v) => v.clientEventId), ids);
+    assert.equal((await world.local.get("queue")).queue.length, 0);
+  });
+
+  it("when the server fails part-way through a backlog, keeps the rest and later sends each visit exactly once", async () => {
+    const ids = Array.from({ length: 120 }, (_, i) => `visit-${i}`);
+    await world.local.set({ queue: ids.map((clientEventId) => ({ clientEventId })) });
+
+    world.server.failAfterBatches = 1;
+    await world.fire("alarm", { name: "poll" });
+    assert.deepEqual(world.server.batches, [50]);
+    assert.equal((await world.local.get("queue")).queue.length, 70);
+
+    world.server.failAfterBatches = null;
+    await world.fire("alarm", { name: "poll" });
+    assert.deepEqual(world.server.batches, [50, 50, 20]);
+    assert.deepEqual(world.server.uploads.map((v) => v.clientEventId), ids); // all 120, in order, none twice
     assert.equal((await world.local.get("queue")).queue.length, 0);
   });
 

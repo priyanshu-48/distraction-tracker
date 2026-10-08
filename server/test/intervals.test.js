@@ -33,6 +33,25 @@ describe("POST /api/intervals", () => {
     expect(await rowCount(user.id)).toBe(2);
   });
 
+  it("accepts a full batch of 50 and refuses 51, storing nothing from the refused one", async () => {
+    const user = await makeTrackingUser();
+    const batch = (n, from) => Array.from({ length: n }, (_, i) => interval({ minsAgo: from + i }));
+    expect((await upload(user, batch(50, 10)).expect(200)).body).toMatchObject({ received: 50, stored: 50 });
+    await upload(user, batch(51, 200)).expect(400);
+    expect(await rowCount(user.id)).toBe(50);
+  });
+
+  it("a retry after a lost response leaves the totals exact", async () => {
+    // The server stored the batch but the extension never saw the answer, so it sends the same batch again.
+    const user = await makeTrackingUser();
+    const batch = [interval({ seconds: 90 }), interval({ minsAgo: 20, seconds: 30 })];
+    await upload(user, batch).expect(200);
+    await upload(user, batch).expect(200);
+    await upload(user, batch).expect(200);
+    const { rows } = await db.query("SELECT COUNT(*)::int AS visits, SUM(duration)::int AS seconds FROM tab_activity WHERE user_id = $1", [user.id]);
+    expect(rows[0]).toEqual({ visits: 2, seconds: 120 });
+  });
+
   it("scopes event ids per user", async () => {
     const a = await makeTrackingUser("a");
     const b = await makeTrackingUser("b");
