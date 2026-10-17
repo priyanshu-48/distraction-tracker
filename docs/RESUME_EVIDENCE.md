@@ -10,21 +10,21 @@ Raw outputs: `docs/evidence/raw/`. Where a number got worse than the resume said
 | Draft claim | Verdict | What to say instead |
 |---|---|---|
 | "1,176 ms to 5.7 ms (206x) on 1M rows" | **Does not reproduce.** Re-measured: 396 ms to 11.95 ms, **33x**. | "about 400 ms to about 12 ms (33x)", with the setup named |
-| "986 automated tests" | **True on `main`** (571 + 365 + 50, three clean-clone runs, no flaky test). **991 on the branch** (553 + 386 + 52): 27 tests were removed with the legacy endpoints and 32 added. README said 751 (stale). | "990 automated tests" once the branch is merged, "980+" until then |
+| "986 automated tests" | **True on `main`** (571 + 365 + 50, three clean-clone runs, no flaky test). **995 on `main` now** (553 + 390 + 52): 27 tests were removed with the legacy endpoints and 36 added since. README said 751 (stale). | "990+ automated tests" (995 today) |
 | "16-route authorization table" | **True on `main`**: 16 rows (`server/test/session.test.js`). On the branch it is **17**: the legacy analytics row was replaced by the two `/notifications/settings` routes, which the table had missed. | "17-route" once merged |
 | "4-job GitHub Actions pipeline" | **True**, and `main` is green. | keep |
 | Day view: 6 requests to 1 | True as a count. **Not a latency win**: the single request is slower (37 ms vs 12 ms) because it returns much more. | claim fewer round trips, not speed |
 | "TypeScript" in the stack line | True for the **client only**. The server and extension are JavaScript. | "TypeScript (React client)" |
-| Coverage | Not measured before. On the branch: server **95.0%** lines, client **93.6%**. Extension: not measurable (see B). | quote server and client separately |
+| Coverage | Not measured before. On the branch: server **95.0%** lines, client **94.1%**. Extension: not measurable (see B). | quote server and client separately |
 
 ## Claims table
 
 | Claim | Verified value | Command | Commit | Date | Raw output | Caveats |
 |---|---|---|---|---|---|---|
 | Tests, per suite | server 571 (28 files), client 365 (21 files), extension 50; 0 failed, 0 skipped, identical in 3 runs each | `docs/evidence/run-tests.sh` (fresh `git clone`, `npm ci`, each suite x3) | 3362e9b | 2026-10-07 | `raw/tests-*-run{1,2,3}.txt`, `tests-meta.txt` | Server tests need a local PostgreSQL (`DB_*` in `server/.env`) |
-| Tests on the branch | server 553 (28 files), client 386 (23 files), extension 52 = **991**; all pass; lint and typecheck clean | `npx vitest run --coverage` (server, client), `node --test "test/*.test.mjs"` | branch (uncommitted) | 2026-10-08 | `raw/final3-server-coverage.txt`, `raw/final2-client-coverage.txt`, `raw/final-extension.txt` | Net change vs `main` (986): 32 tests added (sections B, F and the time-zone test), 27 removed with `analytics.test.js` |
+| Tests on the branch | server 553 (28 files), client 390 (24 files), extension 52 = **995**; all pass; lint and typecheck clean | `npx vitest run --coverage` (server, client), `node --test "test/*.test.mjs"` | branch (uncommitted) | 2026-10-08 | `raw/final3-server-coverage.txt`, `raw/final4-client-coverage.txt`, `raw/final-extension.txt` | Net change vs the 986 measured on `main` at `3362e9b`: 36 tests added (sections B, F, the time-zone test and the dashboard refresh fix), 27 removed with `analytics.test.js` |
 | Server coverage | 95.04% lines, 94.65% statements, 94.09% branches, 96.34% functions (787 lines) | `cd server && npm run coverage` | branch | 2026-10-08 | `raw/final3-server-coverage.txt` | Counts every non-test file under `server/` except `scripts/`, `vendor/`, config |
-| Client coverage | 93.64% lines, 93.32% statements, 88.49% branches, 88.36% functions (912 lines); was 91.0% before the two new test files | `cd client && npm run coverage` | branch | 2026-10-08 | `raw/final2-client-coverage.txt` (before: `raw/final-client-coverage.txt`) | Counts every file under `src/` except tests and `src/test/` |
+| Client coverage | 94.07% lines, 93.79% statements, 88.73% branches, 88.91% functions (912 lines); was 91.0% before the new client test files | `cd client && npm run coverage` | branch | 2026-10-08 | `raw/final4-client-coverage.txt` (earlier: `raw/final2-client-coverage.txt`, `raw/final-client-coverage.txt`) | Counts every file under `src/` except tests and `src/test/` |
 | Extension coverage | **Not measurable as-is** | `node --test --experimental-test-coverage` | 3362e9b | 2026-10-08 | `raw/coverage-extension.txt` | The tests import a temporary copy of `background.js`, so Node reports no files (the "100%" it prints is empty, ignore it). I did not change the tests to fix this. |
 | Query speedup | **33x** (sum of p50 over the 7 legacy queries: 396.12 ms to 11.95 ms) | `docs/evidence/run-analytics-states.sh` (uses `server/scripts/bench/analytics.js`, 15 runs after 3 warm-ups) | 3362e9b | 2026-10-08 | `raw/analytics-{A,B,C,D}-{timings,plans,indexes}.txt`, `raw/seed.txt` | Synthetic data (`scripts/seed.js`), one laptop, PostgreSQL 17.11 in Docker, warm cache |
 | Index alone / rewrite alone | 1.16x (341.12 ms) / 1.23x (322.12 ms) | same | same | same | same | Only the two together produce the 33x |
@@ -39,15 +39,15 @@ Raw outputs: `docs/evidence/raw/`. Where a number got worse than the resume said
 
 Latest successful CI run on `main`: https://github.com/priyanshu-48/distraction-tracker/actions/runs/37649413384 (commit `3362e9b`).
 
-## A. Test count: why 751, 986 and 990
+## A. Test count: why 751, 986 and 995
 
 - README's "751 (362 server, 349 client, 40 extension)" is **stale**: it was last edited in `e127a6a` and tests have been added since (notifications, login hardening, data controls).
 - The 986 figure (571 + 365 + 50) is correct for `main` at `3362e9b`: three clean-clone runs of each suite gave the same counts.
-- The branch has 990 because this work added 2 server and 2 extension tests (section F). README now says 990.
+- `main` now has **995** (553 server + 390 client + 52 extension, measured on 2026-10-18). Against the 986 above, 36 tests were added (ingestion limits and retries, time zones, `api.js`, token sync, the dashboard refresh fix) and 27 were removed with the legacy analytics endpoints. The README says 995.
 
 ## B. Coverage
 
-Server 95.04% lines, client 93.64% (after the two client test files below). Least covered files (lines): server `server.js` 0%
+Server 95.04% lines, client 94.07% (after the new client test files below). Least covered files (lines): server `server.js` 0%
 and `db/migrate.js` 0% (entry points, exercised only by running the app and Docker), `controllers/registerController.js` 83.3%;
 client `App.jsx`, `main.jsx`, `DesignPage.tsx` (dev only) 0%, `features/sites/SiteRow.tsx` 40%, `AddSiteForm.tsx` 50%,
 `SitesManager.tsx` 70%. Lists: `raw/least-covered-final.txt` (and `raw/least-covered.txt` from before).
@@ -139,7 +139,7 @@ routes replaced the removed analytics row, so the table has **17** rows and cove
 
 - *Full-stack platform:* "Built a full-stack browsing-analytics platform: Chrome extension (Manifest V3), React/TypeScript dashboard, and an Express.js/PostgreSQL API; visits upload in batches of up to 50 with client-generated UUIDs and a database unique constraint, so retries never double-count (covered by tests for repeated, overlapping, lost-response and part-way-failed uploads)."
 - *Performance:* "Cut the original dashboard's analytics queries from about 400 ms to about 12 ms (33x, sum of p50 over seven queries on 1M synthetic rows, PostgreSQL 17) by adding a composite index and rewriting date filters as range queries; showed that neither change helps alone." Do not use 206x.
-- *Security and quality:* "Hardened authentication with httpOnly SameSite=Strict cookie sessions, bcrypt, server-side token revocation, CSRF protection and a least-privilege extension token (17-route authorization test table; 23 of 23 deliberate auth-logic breaks caught); 991 automated tests (95% server and 94% client line coverage) run in a 4-job GitHub Actions pipeline." Use the `main` figures (986 tests, 16 routes) until the branch is merged.
+- *Security and quality:* "Hardened authentication with httpOnly SameSite=Strict cookie sessions, bcrypt, server-side token revocation, CSRF protection and a least-privilege extension token (17-route authorization test table; 23 of 23 deliberate auth-logic breaks caught); 995 automated tests (95% server and 94% client line coverage) run in a 4-job GitHub Actions pipeline." Use the `main` figures (986 tests, 16 routes) until the branch is merged.
 - *Stack line:* React, TypeScript (client), Tailwind CSS, Node.js, Express.js, PostgreSQL, Manifest V3, JWT, Docker. All backed.
 
 ## I. Questions only you can answer
