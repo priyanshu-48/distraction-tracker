@@ -2,6 +2,8 @@
 
 [![CI](https://github.com/priyanshu-48/distraction-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/priyanshu-48/distraction-tracker/actions/workflows/ci.yml)
 
+**[Watch the 76-second demo video](https://www.youtube.com/watch?v=BgcBFHq1x8s)** (sample data).
+
 **See where your attention goes, and whether it is getting better.** A Chrome extension records how long you spend on each site while you have a tracking session on. You mark the sites that pull you away, set a daily budget, and a dashboard shows how today, this week and this month compare with what is usual for you.
 
 ![The Day view: budget bar, top distractions, timeline, habit numbers](docs/screenshots/day.jpg)
