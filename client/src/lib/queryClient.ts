@@ -7,10 +7,15 @@ import { focusManager, QueryClient } from "@tanstack/react-query";
  */
 export const REFOCUS_DELAY_MS = 1500;
 
-/** For live views (Today, Trends): refresh every minute, only while the tab is visible. */
+/**
+ * For live views (Today, a week or month in progress, the session state): refresh every minute while the tab is
+ * visible, and on every return to the tab even when the data is still inside `staleTime`. Without "always", a quick
+ * trip to another site (under 30 s) and back showed the old numbers until the next minute tick.
+ */
 export const liveQueryOptions = {
   refetchInterval: 60_000,
   refetchIntervalInBackground: false,
+  refetchOnWindowFocus: "always",
 } as const;
 
 focusManager.setEventListener((handleFocus) => {
