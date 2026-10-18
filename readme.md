@@ -110,7 +110,18 @@ npm run dev                 # http://localhost:5173
 
 The extension asks for the `notifications` permission so it can show budget alerts; it is only used if you switch alerts on in Settings (when updating an already loaded copy, reload it at `chrome://extensions`).
 
-The extension talks to `http://localhost:3000` and the dashboard to `http://localhost:5173`; both are fixed in `extension/manifest.json` and `extension/background.js`.
+By default the extension talks to `http://localhost:3000` and trusts a dashboard at `http://localhost:5173`. To use your own addresses, see [Running it on your own domain](#running-it-on-your-own-domain).
+
+## Running it on your own domain
+
+The dashboard and the API are already configured through environment variables; only the extension had its addresses built in, and a small script now rebuilds it for yours. This project has not been deployed to a hosted environment: the script is covered by its own tests and by an end-to-end test against a local address, not by a real deployment.
+
+1. **Host the API and the dashboard under one site over https**, for example `api.example.com` and `app.example.com`. The login cookie is `SameSite=Strict`, so it is only sent when both are on the same site.
+2. **API environment:** `NODE_ENV=production` (which makes the cookie `Secure`), `CORS_ORIGINS=https://app.example.com`, a long random `JWT_SECRET`, and the `DB_*` settings.
+3. **Dashboard build:** set `VITE_API_URL=https://api.example.com/api` and `VITE_EXTENSION_ID` (step 4). The Content-Security-Policy added to the production build allows that API address automatically.
+4. **Extension:** run `node extension/configure.mjs --api https://api.example.com/api --dashboard https://app.example.com`. It writes a copy to `extension/dist` with the two addresses and the matching permissions in `manifest.json`. Load that folder at `chrome://extensions`, copy its ID into `VITE_EXTENSION_ID` and rebuild the dashboard.
+
+The addresses are fixed when the extension is built, on purpose: if the dashboard could tell the extension where to send visits and its token, a compromised page could redirect them. Plain `http` is refused for anything but `localhost`. Publishing in the Chrome Web Store would also need a privacy policy, since the extension records full URLs.
 
 ## API
 

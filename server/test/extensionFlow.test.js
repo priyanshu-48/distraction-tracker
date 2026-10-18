@@ -1,6 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
+import { configureSources } from "../../extension/configure.mjs";
 import app from "../app.js";
 import db from "../db.js";
 import { http, makeUser } from "./helpers.js";
@@ -13,6 +14,7 @@ import { http, makeUser } from "./helpers.js";
 // The extension ignores visits under one second, so each visit below lasts about 1.1 s.
 
 const source = readFileSync(fileURLToPath(new URL("../../extension/background.js", import.meta.url)), "utf8");
+const manifest = readFileSync(fileURLToPath(new URL("../../extension/manifest.json", import.meta.url)), "utf8");
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const VISIT_MS = 1100;
 
@@ -28,8 +30,8 @@ afterAll(() => new Promise((resolve) => server.close(resolve)));
 let browser;
 afterEach(() => browser?.uninstall());
 
-/** A fresh browser with the real background.js loaded into it. Its requests go to the test server. */
-function installBrowser() {
+/** A fresh browser with the real background.js (or a copy built for another address) loaded into it. */
+function installBrowser(code = source) {
   const area = () => {
     const data = {};
     return {
@@ -48,7 +50,7 @@ function installBrowser() {
   const event = (name) => ({ addListener: (fn) => (listeners[name] ??= []).push(fn) });
   let activeTab;
 
-  const calls = []; // every request the extension made: { method, path, status }
+  const calls = []; // every request the extension made: { url (as the extension wrote it), method, path, status }
   const faults = { loseUploadAnswers: 0 }; // how many upload answers to lose on their way back
 
   const realFetch = globalThis.fetch;
@@ -56,7 +58,7 @@ function installBrowser() {
     const target = String(url).replace("http://localhost:3000", baseUrl); // the extension has the address built in
     const res = await realFetch(target, init); // the server really receives and handles the request
     const path = new URL(target).pathname;
-    calls.push({ method: init?.method ?? "GET", path, status: res.status });
+    calls.push({ url: String(url), method: init?.method ?? "GET", path, status: res.status });
     if (path === "/api/intervals" && faults.loseUploadAnswers > 0) {
       faults.loseUploadAnswers--;
       throw new TypeError("Failed to fetch"); // the server answered, but the browser never got it
@@ -78,7 +80,7 @@ function installBrowser() {
     alarms: { create() {}, onAlarm: event("alarm") },
     runtime: { onMessageExternal: event("external"), getManifest: () => ({ version: "test" }), getURL: (path) => path },
   };
-  new Function(source)(); // runs background.js against the fake chrome above
+  new Function(code)(); // runs background.js against the fake chrome above
 
   return {
     local,
@@ -109,9 +111,9 @@ async function extensionTokenFor(auth) {
 }
 
 /** Signs in, connects the browser and starts a session on the server, like the dashboard does. */
-async function connectedUser() {
+async function connectedUser(code) {
   const user = await makeUser();
-  browser = installBrowser();
+  browser = installBrowser(code);
   expect(await browser.message({ type: "SET_TOKEN", token: await extensionTokenFor(user.auth) })).toEqual({ status: "ok" });
   await http().post("/api/start-tracking").set(user.auth).expect(200);
   expect(await browser.message({ type: "TRACKING_CHANGED" })).toMatchObject({ status: "ok", tracking: true });
@@ -150,6 +152,18 @@ describe("the extension and the API together", () => {
     const summary = (await http().get(`/api/summary?date=${today}&tz=UTC`).set(user.auth).expect(200)).body;
     expect(summary.totals.visits).toBe(1);
     expect(JSON.stringify(summary.topSites)).toContain("youtube.com");
+  });
+
+  it("a copy built for another address talks to that address and nowhere else", async () => {
+    // Built the way extension/configure.mjs builds it for a deployment; here the "other address" is the test server.
+    const built = configureSources({ api: `${baseUrl}/api`, dashboard: "http://localhost:5173" }, { background: source, manifest });
+    const user = await connectedUser(built.background);
+    await visitThenLeave();
+
+    expect(await visits(user.id)).toHaveLength(1);
+    expect(browser.calls.length).toBeGreaterThan(0);
+    expect(browser.calls.every((call) => call.url.startsWith(`${baseUrl}/api/`))).toBe(true);
+    expect(browser.calls.some((call) => call.url.includes("localhost:3000"))).toBe(false); // the built-in address is gone
   });
 
   it("uses only the limited token: the extension never holds the dashboard's login", async () => {

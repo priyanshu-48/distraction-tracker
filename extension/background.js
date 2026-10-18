@@ -1,3 +1,5 @@
+// configure.mjs rewrites the API line and the dashboard line below when it builds the extension for another host;
+// keep each on a single line with these exact defaults.
 const API = "http://localhost:3000/api";
 // The dashboard is the one page we never record (also the only origin allowed in manifest externally_connectable).
 const DASHBOARD_ORIGIN = "http://localhost:5173";
