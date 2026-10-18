@@ -729,3 +729,163 @@ describe("budget alerts from the server", () => {
     assert.deepEqual(world.shown, []);
   });
 });
+
+describe("what a visit keeps (privacy)", () => {
+  let world;
+  beforeEach(async () => {
+    world = await createWorld();
+    await world.startTracking();
+  });
+
+  const SECRET_PAGE = "https://www.youtube.com/watch?v=abc123&list=PLprivate#t=30";
+  const visitAndLeave = async (url = SECRET_PAGE) => {
+    await world.goTo(1, url);
+    world.advance(60);
+    await world.goTo(2, "https://github.com/");
+  };
+
+  it("records only the site by default: no path, query, fragment or page title", async () => {
+    await visitAndLeave();
+    const [visit] = world.server.uploads;
+    assert.equal(visit.url, "https://www.youtube.com/");
+    assert.equal(visit.title, "");
+    assert.equal(visit.domain, "www.youtube.com");
+    const everything = JSON.stringify(world.server.uploads);
+    for (const leaked of ["watch", "abc123", "PLprivate", "t=30"]) assert.ok(!everything.includes(leaked), `${leaked} must not be uploaded`);
+  });
+
+  it("keeps a port, for a site running on this computer", async () => {
+    await visitAndLeave("http://localhost:3000/dev-app?token=xyz");
+    assert.equal(world.server.uploads[0].url, "http://localhost:3000/");
+  });
+
+  it("holds no page details anywhere while the visit is in progress or waiting to upload", async () => {
+    world.server.online = false;
+    await world.goTo(1, SECRET_PAGE);
+    assert.equal((await world.session.get("current")).current.url, "https://www.youtube.com/"); // in progress
+    world.advance(60);
+    await world.goTo(2, "https://github.com/");
+    const queued = JSON.stringify((await world.local.get("queue")).queue);
+    assert.ok(queued.includes("youtube.com") && !queued.includes("abc123") && !queued.includes("watch")); // waiting to upload
+  });
+
+  it("records the full address and the title when the switch is on", async () => {
+    await world.local.set({ recordDetails: true });
+    await visitAndLeave();
+    const [visit] = world.server.uploads;
+    assert.equal(visit.url, SECRET_PAGE);
+    assert.equal(visit.title, "T");
+  });
+
+  it("counts only a real true as on, not any other stored value", async () => {
+    for (const value of ["true", 1, "yes", null, undefined]) {
+      world.server.uploads.length = 0;
+      await world.local.set({ recordDetails: value });
+      await visitAndLeave();
+      assert.equal(world.server.uploads[0].url, "https://www.youtube.com/", `${String(value)} must not turn details on`);
+      assert.equal(world.server.uploads[0].title, "");
+    }
+  });
+
+  it("turning the switch off again goes back to the site alone for new visits", async () => {
+    await world.local.set({ recordDetails: true });
+    await visitAndLeave();
+    await world.local.set({ recordDetails: false });
+    await visitAndLeave();
+    assert.equal(world.server.uploads[0].url, SECRET_PAGE);
+    assert.equal(world.server.uploads[1].url, "https://www.youtube.com/");
+  });
+
+  it("does not change a visit already under way: it keeps what it started with", async () => {
+    await world.goTo(1, "https://www.youtube.com/");
+    await world.local.set({ recordDetails: true }); // switched on mid-visit
+    world.advance(30);
+    await world.goTo(1, SECRET_PAGE); // the same site, so the same visit
+    world.advance(30);
+    await world.goTo(2, "https://github.com/");
+    assert.equal(world.server.uploads.length, 1);
+    assert.equal(world.server.uploads[0].url, "https://www.youtube.com/");
+  });
+
+  it("still treats moving around one site as one visit", async () => {
+    await world.goTo(1, "https://www.youtube.com/");
+    world.advance(10);
+    await world.goTo(1, "https://www.youtube.com/@someone/videos?x=1");
+    world.advance(10);
+    await world.goTo(1, SECRET_PAGE);
+    world.advance(10);
+    await world.goTo(2, "https://github.com/");
+    assert.equal(world.server.uploads.length, 1);
+    assert.equal(Date.parse(world.server.uploads[0].endedAt) - Date.parse(world.server.uploads[0].startedAt), 30_000);
+  });
+});
+
+describe("the popup's privacy switch", () => {
+  const popupSource = readFileSync(fileURLToPath(new URL("../popup.js", import.meta.url)), "utf8");
+
+  /** Runs popup.js against a tiny fake page and fake storage, and returns what the user would see and what got stored. */
+  async function openPopup(stored = {}) {
+    const local = { ...stored };
+    const elements = {};
+    const element = (id) => (elements[id] ??= { id, textContent: "", className: "", checked: false, handlers: {}, addEventListener(type, fn) { this.handlers[type] = fn; } });
+    globalThis.document = { getElementById: element };
+    globalThis.chrome = {
+      storage: {
+        local: {
+          get: async (keys) => Object.fromEntries([].concat(keys).filter((k) => k in local).map((k) => [k, local[k]])),
+          set: async (values) => void Object.assign(local, values),
+        },
+        session: { get: async () => ({}) },
+      },
+    };
+    try {
+      await new Function(`return ${popupSource.trim().replace(/;$/, "")}`)(); // popup.js is one self-starting async function; wait for it
+    } finally {
+      delete globalThis.document;
+      delete globalThis.chrome;
+    }
+    return {
+      local,
+      box: element("details"),
+      hint: element("details-hint"),
+      /** The user ticks or unticks the box. */
+      async toggle(on) {
+        globalThis.chrome = { storage: { local: { set: async (values) => void Object.assign(local, values) } } };
+        try {
+          element("details").checked = on;
+          await element("details").handlers.change();
+        } finally {
+          delete globalThis.chrome;
+        }
+      },
+    };
+  }
+
+  it("starts off, and says that only the site is recorded", async () => {
+    const popup = await openPopup();
+    assert.equal(popup.box.checked, false);
+    assert.match(popup.hint.textContent, /only the site is recorded/);
+  });
+
+  it("shows the stored choice when it was switched on earlier", async () => {
+    const popup = await openPopup({ recordDetails: true });
+    assert.equal(popup.box.checked, true);
+    assert.match(popup.hint.textContent, /full address and the page title/);
+  });
+
+  it("stores the choice and updates the explanation when the box is ticked and unticked", async () => {
+    const popup = await openPopup();
+    await popup.toggle(true);
+    assert.equal(popup.local.recordDetails, true);
+    assert.match(popup.hint.textContent, /full address and the page title/);
+    await popup.toggle(false);
+    assert.equal(popup.local.recordDetails, false);
+    assert.match(popup.hint.textContent, /only the site is recorded/);
+  });
+
+  it("is a setting the dashboard cannot reach: no message handler touches it", () => {
+    const background = readFileSync(fileURLToPath(new URL("../background.js", import.meta.url)), "utf8");
+    const handlers = background.slice(background.indexOf("const dashboardMessages"), background.indexOf("chrome.runtime.onMessageExternal.addListener"));
+    assert.ok(!handlers.includes("recordDetails"), "no dashboard message may read or write the privacy switch");
+  });
+});

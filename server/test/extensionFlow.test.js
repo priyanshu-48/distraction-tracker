@@ -138,7 +138,7 @@ describe("the extension and the API together", () => {
 
     const rows = await visits(user.id);
     expect(rows).toHaveLength(1);
-    expect(rows[0]).toMatchObject({ domain: "youtube.com", url: "https://youtube.com/watch?v=abc", title: "Page" });
+    expect(rows[0]).toMatchObject({ domain: "youtube.com", url: "https://youtube.com/", title: "" }); // only the site, by default
     expect(Number(rows[0].duration)).toBeGreaterThanOrEqual(1);
     expect(new Date(rows[0].ended_at) > new Date(rows[0].started_at)).toBe(true);
 
@@ -152,6 +152,35 @@ describe("the extension and the API together", () => {
     const summary = (await http().get(`/api/summary?date=${today}&tz=UTC`).set(user.auth).expect(200)).body;
     expect(summary.totals.visits).toBe(1);
     expect(JSON.stringify(summary.topSites)).toContain("youtube.com");
+  });
+
+  it("by default stores and exports only the site: no page path, query, fragment or title reaches the database", async () => {
+    const user = await connectedUser();
+    await visitThenLeave("https://www.youtube.com/watch?v=abc123&list=PLprivate#t=30");
+
+    const rows = await visits(user.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ domain: "youtube.com", url: "https://www.youtube.com/", title: "" }) // the server strips the www. from the domain;
+    const stored = await db.query("SELECT url, title FROM tab_activity WHERE user_id = $1 AND (url LIKE '%abc123%' OR url LIKE '%watch%' OR url LIKE '%PLprivate%' OR title <> '')", [user.id]);
+    expect(stored.rows).toHaveLength(0);
+
+    // and the user's own export, in both formats, carries nothing more than that
+    for (const format of ["json", "csv"]) {
+      const res = await http().get(`/api/account/export?format=${format}`).set(user.auth).expect(200);
+      const exported = res.text || JSON.stringify(res.body);
+      expect(exported).toContain("www.youtube.com");
+      for (const leaked of ["abc123", "PLprivate", "watch?v", "t=30"]) expect(exported).not.toContain(leaked);
+    }
+  });
+
+  it("stores the full address and the title only when the person has switched that on in the extension", async () => {
+    const user = await connectedUser();
+    browser.local.data.recordDetails = true; // the popup's switch
+    await visitThenLeave("https://www.youtube.com/watch?v=abc123");
+
+    const rows = await visits(user.id);
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ domain: "youtube.com", url: "https://www.youtube.com/watch?v=abc123", title: "Page" });
   });
 
   it("a copy built for another address talks to that address and nowhere else", async () => {

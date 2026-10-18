@@ -162,6 +162,15 @@ function isTrackable(url) {
   return !!url?.startsWith("http") && new URL(url).origin !== DASHBOARD_ORIGIN;
 }
 
+// By default a visit records only the site: the address without its path, query or fragment, and no page title. Page paths and
+// titles can carry things people would not want stored (a password-reset link, a document name), and nothing in the product
+// uses them, so they are dropped here, before a visit is even queued. The popup has an opt-in switch ("recordDetails") to keep them.
+async function whatToKeep(tab) {
+  const { recordDetails } = await chrome.storage.local.get("recordDetails");
+  if (recordDetails === true) return { url: tab.url, title: tab.title || "" };
+  return { url: `${new URL(tab.url).origin}/`, title: "" };
+}
+
 // Make `tab` the in-progress interval (closing the previous one).
 async function startFor(tab) {
   if (!isTrackable(tab?.url) || !(await isTracking())) return closeCurrent();
@@ -174,13 +183,14 @@ async function startFor(tab) {
     return;
   }
   await closeCurrent();
+  const { url, title } = await whatToKeep(tab);
   await chrome.storage.session.set({
     current: {
       tabId: tab.id,
       clientEventId: crypto.randomUUID(),
-      url: tab.url,
+      url,
       domain: new URL(tab.url).hostname,
-      title: tab.title || "",
+      title,
       startedAt: new Date().toISOString()
     }
   });

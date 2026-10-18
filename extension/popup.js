@@ -1,6 +1,6 @@
 (async () => {
-  const [{ token, authState, queue = [] }, { tracking }] = await Promise.all([
-    chrome.storage.local.get(["token", "authState", "queue"]),
+  const [{ token, authState, queue = [], recordDetails }, { tracking }] = await Promise.all([
+    chrome.storage.local.get(["token", "authState", "queue", "recordDetails"]),
     chrome.storage.session.get("tracking"),
   ]);
 
@@ -20,4 +20,19 @@
   status.textContent = text;
   status.className = cls;
   document.getElementById("detail").textContent = detail;
+
+  // Privacy switch, on this device only: the dashboard cannot change it. Off means only the site is recorded.
+  const details = document.getElementById("details");
+  const hint = document.getElementById("details-hint");
+  const describe = (on) => {
+    hint.textContent = on
+      ? "On: the full address and the page title are recorded for new visits."
+      : "Off: only the site is recorded, never the page path, query or title.";
+  };
+  details.checked = recordDetails === true;
+  describe(details.checked);
+  details.addEventListener("change", async () => {
+    await chrome.storage.local.set({ recordDetails: details.checked });
+    describe(details.checked);
+  });
 })();
