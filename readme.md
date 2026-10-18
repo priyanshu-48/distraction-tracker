@@ -172,7 +172,6 @@ By default everything stays on your machine and in your own database. The extens
 
 - Chromium browsers only (Chrome, Brave, Edge); the dashboard URL and API URL are fixed to localhost.
 - A single daily budget and a per-site mark; no per-site limits or blocking.
-- The production client build takes about six minutes (331 to 369 s over three runs on a 20-thread laptop); the cause is not yet found.
 - Each of the 31 bars in the Month view is narrow on a phone; the Day view's date stepper is the fallback.
 - Budget alerts appear as Chrome notifications within about 30 seconds (the extension's poll interval); this was checked in a real Chrome with the unpacked extension. A live list of alerts in the dashboard is not built yet. The weekly summary and streak messages come from a check every 15 minutes while the server is running, each on the user's own clock (the time zone saved with the switch): the summary is due from Monday 09:00 until the end of Wednesday, and a server that is off for that whole window skips that week; a streak milestone is announced only on the morning after the day it is reached. Alerts use a hosted notification service. Erasure there is confirmed asynchronously: until it confirms (normally within seconds, longer if the service is down), the service still holds your data. Clicking a notification does nothing yet.
 

@@ -1,0 +1,5 @@
+Client CI job on GitHub Actions (ubuntu-latest), last four runs on main before the fix, in seconds per step (gh run view --json jobs):
+run 39143870385  npm ci 3   lint 2   typecheck 2   coverage 13   build 244
+run 39142539774  npm ci 6   lint 3   typecheck 4   coverage 21   build 405
+run 39141377372  npm ci 4   lint 2   typecheck 3   coverage 14   build 321
+run 39139807639  npm ci 4   lint 2   typecheck 3   coverage 15   build 337

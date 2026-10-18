@@ -1,0 +1,31 @@
+CPU profile of `vite build` (Rollup 4.64.0, Vite 6.4.3, 316 modules, 50 ms sampling), summarised with a script that adds up self time per package and function.
+The build took 303 s under the profiler. Two profile files: the main thread (busy) and a worker (idle, waiting).
+
+profiles: 2   sampled time: 602.8 s
+
+Self time by package
+   302.0 s   50.1%  ((idle))
+   283.1 s   47.0%  rollup
+    15.5 s    2.6%  ((garbage collector))
+     0.5 s    0.1%  ((program))
+     0.3 s    0.1%  vite
+     0.2 s    0.0%  node:path
+     0.2 s    0.0%  node:internal/child_process
+     0.1 s    0.0%  postcss
+     0.1 s    0.0%  tailwindcss
+
+Self time by function
+   302.0 s  (idle)
+    57.9 s  includeCallArgumentsWhenCalledAtPath  rollup shared/node-entry.js:5455
+    55.9 s  trackEntityAtPathAndGetIfTracked      rollup shared/node-entry.js:2281
+    46.6 s  includeCallArgumentsOfPossibleValues  rollup shared/node-entry.js:5478
+    15.5 s  (garbage collector)
+    14.6 s  includeInteractionWithoutThis         rollup shared/node-entry.js:2542
+    13.2 s  includeCallArgumentsWhenCalledAtPath  rollup shared/node-entry.js:12898
+    10.2 s  includePath                           rollup shared/node-entry.js:5589
+    10.2 s  includeCallArgumentsOfPossibleValue   rollup shared/node-entry.js:5487
+     9.8 s  includePath                           rollup shared/node-entry.js:3834
+     7.4 s  includePath                           rollup shared/node-entry.js:5424
+
+Reading: of the busy time (about 301 s) about 283 s (94%) is inside Rollup's tree-shaking ("include") phase, about 15 s is garbage collection,
+and Vite, Tailwind, PostCSS and the project's own plugins together are well under 2 s.

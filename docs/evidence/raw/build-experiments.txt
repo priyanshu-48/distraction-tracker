@@ -1,0 +1,14 @@
+Timings from the investigation (2026-10-18), copied from the scratch files that recorded them.
+
+experiment build (22 icons only): 311 s, exit 0
+✓ 316 modules transformed.
+✓ built in 5m 8s
+
+profiled build: 300 s
+(an earlier profiled run with 1 ms sampling also took 300 s; its 500 MB profile file was too large to read)
+
+experiment build with rollup 4.64.10: 4 s, exit 0
+✓ 316 modules transformed.
+✓ built in 2.50s
+
+Clean clone, npm ci from the updated lockfile (Rollup 4.64.10): npm ci 31 s; production build 8 s, exit 0, 1895 modules, built in 6.93s

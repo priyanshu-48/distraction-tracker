@@ -7,8 +7,9 @@
 #   docker compose run --rm api node scripts/seed.js --confirm=distraction_tracker --rows 100000
 #   then log in as demo1@example.test / demo-password
 #
-# ponytail: the web service runs the Vite dev server (the production build currently takes
-# ~6 min, see AUDIT P-07). Swap it for an nginx image serving `vite build` once that is fixed.
+# ponytail: the web service runs the Vite dev server because the production build used to take about 6 minutes. That was
+# fixed (docs/evidence/build-time-investigation.md), so this can now be swapped for an nginx image serving `vite build`.
+# Not done yet.
 
 services:
   db:
