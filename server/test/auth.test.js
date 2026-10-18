@@ -1,9 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import jwt from "jsonwebtoken";
 import db from "../db.js";
 import { http, makeUser } from "./helpers.js";
 
 const creds = { email: "a@test.io", password: "password123" };
+
+afterEach(() => vi.restoreAllMocks());
 
 describe("POST /api/auth/register", () => {
   it("creates a user and stores a hash, not the password", async () => {
@@ -17,6 +19,17 @@ describe("POST /api/auth/register", () => {
   it("rejects a duplicate email with 409", async () => {
     await http().post("/api/auth/register").send(creds).expect(201);
     await http().post("/api/auth/register").send(creds).expect(409);
+  });
+
+  it("answers a failure other than a duplicate with a plain 500 that leaks nothing, and creates no account", async () => {
+    vi.spyOn(db, "query").mockRejectedValueOnce(Object.assign(new Error("connection to 10.0.0.5:5432 refused"), { code: "ECONNREFUSED" }));
+    const res = await http().post("/api/auth/register").send(creds).expect(500);
+
+    expect(res.body).toMatchObject({ error: "Internal server error", message: "Something went wrong" });
+    expect(JSON.stringify(res.body)).not.toMatch(/10\.0\.0\.5|ECONNREFUSED|5432/);
+    vi.restoreAllMocks();
+    const { rows } = await db.query("SELECT 1 FROM users WHERE email = $1", [creds.email]);
+    expect(rows).toHaveLength(0);
   });
 
   it.each([
