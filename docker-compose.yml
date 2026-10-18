@@ -7,9 +7,10 @@
 #   docker compose run --rm api node scripts/seed.js --confirm=distraction_tracker --rows 100000
 #   then log in as demo1@example.test / demo-password
 #
-# ponytail: the web service runs the Vite dev server because the production build used to take about 6 minutes. That was
-# fixed (docs/evidence/build-time-investigation.md), so this can now be swapped for an nginx image serving `vite build`.
-# Not done yet.
+# The web service is the production build of the dashboard served by nginx (client/Dockerfile), not the Vite dev server:
+# there is no hot reload here. For development run `npm run dev` in client/ as usual. The API address and the extension's id
+# are baked into the page when it is built, so after changing API_PORT or VITE_EXTENSION_ID run `docker compose up --build`.
+# To connect the extension, put its id (chrome://extensions) in a .env file next to this one: VITE_EXTENSION_ID=...
 
 services:
   db:
@@ -53,9 +54,13 @@ services:
       retries: 5
 
   web:
-    build: ./client
+    build:
+      context: ./client
+      args:
+        VITE_API_URL: http://localhost:${API_PORT:-3000}/api
+        VITE_EXTENSION_ID: ${VITE_EXTENSION_ID:-}
     ports:
-      - "${WEB_PORT:-5173}:5173"
+      - "${WEB_PORT:-5173}:8080"
     depends_on:
       api:
         condition: service_healthy
