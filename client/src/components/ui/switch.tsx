@@ -2,7 +2,10 @@ import * as React from "react";
 import * as SwitchPrimitive from "@radix-ui/react-switch";
 import { cn } from "@/lib/utils";
 
-/** Toggle with a built-in role and keyboard support. Pair it with a visible <label htmlFor>. */
+/**
+ * Toggle with a built-in role and keyboard support. Give it a name: a visible <label htmlFor> when the page has one
+ * of these, or `aria-label` when the same switch can appear more than once (an id would then be duplicated).
+ */
 export function Switch({ className, ...props }: React.ComponentProps<typeof SwitchPrimitive.Root>) {
   return (
     <SwitchPrimitive.Root

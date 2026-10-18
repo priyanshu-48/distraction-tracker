@@ -8,20 +8,14 @@ import { useMarkSite } from "./queries";
 export function MarkSwitch({ domain, marked, onChange }: { domain: string; marked: boolean; onChange?: (marked: boolean) => void }) {
   const mark = useMarkSite();
   const checked = mark.isPending ? mark.variables.marked : marked;
-  const id = `mark-${domain}`;
   return (
-    <>
-      <label htmlFor={id} className="sr-only">
-        Count {domain} as a distraction
-      </label>
-      <Switch
-        id={id}
-        checked={checked}
-        onCheckedChange={(next) => {
-          mark.mutate({ domain, marked: next });
-          onChange?.(next);
-        }}
-      />
-    </>
+    <Switch
+      aria-label={`Count ${domain} as a distraction`}
+      checked={checked}
+      onCheckedChange={(next) => {
+        mark.mutate({ domain, marked: next });
+        onChange?.(next);
+      }}
+    />
   );
 }

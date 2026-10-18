@@ -3,6 +3,7 @@ import { ArrowRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardTitle } from "@/components/ui/card";
+import { Delta } from "@/components/ui/delta";
 import { formatDuration } from "@/lib/format";
 import { MarkSwitch } from "@/features/sites/MarkSwitch";
 import { useMarkSite } from "@/features/sites/queries";
@@ -68,9 +69,7 @@ export function TopSitesCard({
                 {delta ? (
                   <>
                     {" · "}
-                    <span className={`whitespace-nowrap ${delta.more ? "text-coral" : "text-teal"}`} aria-label={delta.spoken}>
-                      {delta.text}
-                    </span>
+                    <Delta className={`whitespace-nowrap ${delta.more ? "text-coral" : "text-teal"}`} text={delta.text} spoken={delta.spoken} />
                   </>
                 ) : null}
               </p>

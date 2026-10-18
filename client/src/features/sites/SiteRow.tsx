@@ -18,7 +18,6 @@ export const LIST_GRID = "space-y-2 @2xl:grid @2xl:grid-cols-[minmax(0,1fr)_auto
 export const ROW_GRID = "grid grid-cols-[1fr_auto] gap-x-4 gap-y-1 @2xl:col-span-6 @2xl:grid-cols-subgrid @2xl:items-center";
 
 export function SiteRow({ site, onToggle }: SiteRowProps) {
-  const switchId = `mark-${site.domain}`;
   return (
     <li className={`${ROW_GRID} rounded-xl bg-card px-4 py-3`}>
       <div className="min-w-0">
@@ -49,10 +48,7 @@ export function SiteRow({ site, onToggle }: SiteRowProps) {
       </dl>
 
       <div className="flex items-center justify-end gap-3">
-        <label htmlFor={switchId} className="sr-only">
-          Count {site.domain} as a distraction
-        </label>
-        <Switch id={switchId} checked={site.marked} onCheckedChange={(marked) => onToggle(site.domain, marked)} />
+        <Switch aria-label={`Count ${site.domain} as a distraction`} checked={site.marked} onCheckedChange={(marked) => onToggle(site.domain, marked)} />
       </div>
     </li>
   );

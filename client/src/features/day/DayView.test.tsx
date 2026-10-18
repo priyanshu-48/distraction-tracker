@@ -128,8 +128,8 @@ describe("a day with activity", () => {
     expect(within(card).getByText("YouTube")).toBeTruthy();
     expect(within(card).getByText("checking habit")).toBeTruthy();
     expect(within(card).getByText(/40m · 3 visits · avg 13m 20s/)).toBeTruthy();
-    expect(within(card).getByLabelText("30m more than usual").textContent).toBe("▲ 30m vs usual"); // youtube
-    expect(within(card).getByLabelText("17m less than usual").textContent).toBe("▼ 17m vs usual"); // twitter
+    expect(within(card).getByText("30m more than usual")).toBeTruthy(); expect(within(card).getByText("▲ 30m vs usual").getAttribute("aria-hidden")).toBe("true"); // youtube
+    expect(within(card).getByText("17m less than usual")).toBeTruthy(); expect(within(card).getByText("▼ 17m vs usual").getAttribute("aria-hidden")).toBe("true"); // twitter
     expect(within(card).queryAllByText(/vs usual/)).toHaveLength(2); // reddit has no history, so no delta
   });
 

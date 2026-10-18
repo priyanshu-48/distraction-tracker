@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { formatDuration } from "@/lib/format";
 import { AddSiteForm } from "./AddSiteForm";
+import { MarkSwitch } from "./MarkSwitch";
 import { SiteRow } from "./SiteRow";
 import SitesManager from "./SitesManager";
 import type { Site, SitesParams, SitesResponse } from "./types";
@@ -103,6 +104,26 @@ describe("SiteRow", () => {
     const onToggle = renderRow({ marked: true });
     await userEvent.setup().click(screen.getByRole("switch"));
     expect(onToggle).toHaveBeenCalledWith("youtube.com", false);
+  });
+});
+
+describe("the same site on the page twice (the Day view behind the Sites panel)", () => {
+  it("gives every switch its own name and no two elements share an id", () => {
+    // A label tied to an id leaves the second of two same-id switches without a name; each switch names itself instead.
+    // Both components are used twice, so a label-and-id in either of them is caught.
+    renderWithClient(
+      <>
+        <MarkSwitch domain="youtube.com" marked={false} />
+        <MarkSwitch domain="youtube.com" marked={false} />
+        <ul>
+          <SiteRow site={site()} onToggle={vi.fn()} />
+          <SiteRow site={site()} onToggle={vi.fn()} />
+        </ul>
+      </>
+    );
+    expect(screen.getAllByRole("switch", { name: "Count youtube.com as a distraction" })).toHaveLength(4);
+    const ids = [...document.querySelectorAll("[id]")].map((node) => node.id);
+    expect(new Set(ids).size).toBe(ids.length);
   });
 });
 

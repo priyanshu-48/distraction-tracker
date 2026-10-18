@@ -175,8 +175,8 @@ describe("sites", () => {
     renderRange();
     const card = (await screen.findByText("Top distractions")).closest("div") as HTMLElement;
     expect(within(card).getByText("YouTube")).toBeTruthy();
-    expect(within(card).getByLabelText("50m more than last week").textContent).toBe("▲ 50m vs last week");
-    expect(within(card).getByLabelText("7m less than last week").textContent).toBe("▼ 7m vs last week");
+    expect(within(card).getByText("50m more than last week")).toBeTruthy(); expect(within(card).getByText("▲ 50m vs last week").getAttribute("aria-hidden")).toBe("true");
+    expect(within(card).getByText("7m less than last week")).toBeTruthy(); expect(within(card).getByText("▼ 7m vs last week").getAttribute("aria-hidden")).toBe("true");
     expect(within(card).getAllByText(/vs last week/)).toHaveLength(2); // twitter did not change
     expect(within(card).getByText("checking habit")).toBeTruthy();
   });
@@ -193,8 +193,8 @@ describe("sites", () => {
   it("lists the biggest changes, up and down", async () => {
     renderRange();
     const card = (await screen.findByText("Biggest changes")).closest("div") as HTMLElement;
-    expect(within(card).getByLabelText("50m more than last week").textContent).toBe("▲ 50m");
-    expect(within(card).getByLabelText("7m less than last week").textContent).toBe("▼ 7m");
+    expect(within(card).getByText("50m more than last week")).toBeTruthy(); expect(within(card).getByText("▲ 50m").getAttribute("aria-hidden")).toBe("true");
+    expect(within(card).getByText("7m less than last week")).toBeTruthy(); expect(within(card).getByText("▼ 7m").getAttribute("aria-hidden")).toBe("true");
   });
 
   it("hides the changes card when nothing moved", async () => {

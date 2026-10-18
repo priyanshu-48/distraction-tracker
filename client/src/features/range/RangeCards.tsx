@@ -1,5 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Card, CardTitle } from "@/components/ui/card";
+import { Delta } from "@/components/ui/delta";
 import { siteDelta } from "@/features/day/insight";
 import { SiteName } from "@/features/sites/SiteName";
 import { formatDuration, formatDurationCoarse } from "@/lib/format";
@@ -35,9 +36,7 @@ export function RangeTopSites({ sites, view }: { sites: RangeSummary["topSites"]
                   {delta ? (
                     <>
                       {" · "}
-                      <span className={`whitespace-nowrap ${delta.more ? "text-coral" : "text-teal"}`} aria-label={delta.spoken}>
-                        {delta.text}
-                      </span>
+                      <Delta className={`whitespace-nowrap ${delta.more ? "text-coral" : "text-teal"}`} text={delta.text} spoken={delta.spoken} />
                     </>
                   ) : null}
                 </p>
@@ -57,12 +56,11 @@ export function Movers({ movers, view }: { movers: RangeSummary["movers"]; view:
   const row = (m: RangeSummary["movers"]["up"][number], more: boolean) => (
     <li key={m.domain} className="flex items-center gap-3">
       <SiteName domain={m.domain} className="flex-1" />
-      <span
+      <Delta
         className={`shrink-0 text-sm whitespace-nowrap ${more ? "text-coral" : "text-teal"}`}
-        aria-label={`${formatDurationCoarse(Math.abs(m.change))} ${more ? "more" : "less"} than ${against}`}
-      >
-        {more ? "▲" : "▼"} {formatDurationCoarse(Math.abs(m.change))}
-      </span>
+        text={`${more ? "▲" : "▼"} ${formatDurationCoarse(Math.abs(m.change))}`}
+        spoken={`${formatDurationCoarse(Math.abs(m.change))} ${more ? "more" : "less"} than ${against}`}
+      />
     </li>
   );
 
