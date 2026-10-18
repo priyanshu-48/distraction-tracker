@@ -77,7 +77,7 @@ The extension's state lives in `chrome.storage`, not in memory, because Manifest
 docker compose up --build
 ```
 
-The dashboard is at <http://localhost:5173> and the API at <http://localhost:3000> (stop any local servers first, or set `API_PORT`, `WEB_PORT` and `DB_PUBLISH_PORT`). To fill it with demo data, then sign in as `demo1@example.test` with password `demo-password`:
+The dashboard is at <http://localhost:5173> and the API at <http://localhost:3000> (stop any local servers first, or set `API_PORT`, `WEB_PORT` and `DB_PUBLISH_PORT`). The dashboard here is the production build served by nginx in a small non-root image (about 92 MB), not the dev server, so there is no hot reload; for development use the steps below. The API address and the extension's id are fixed into the page when it is built: to connect the extension, put `VITE_EXTENSION_ID=<its id>` in a `.env` file next to `docker-compose.yml` and run `docker compose up --build` again. `docs/evidence/check-web-container.sh` checks the container. To fill it with demo data, then sign in as `demo1@example.test` with password `demo-password`:
 
 ```bash
 docker compose run --rm api node scripts/seed.js --confirm=distraction_tracker --rows 100000
@@ -153,7 +153,7 @@ cd client    && npm test && npm run lint && npm run typecheck
 cd extension && node --test "test/*.test.mjs"     # the real background.js against a fake Chrome
 ```
 
-GitHub Actions runs four jobs on every push and pull request: server tests (with a PostgreSQL service), client lint, typecheck, tests and build, extension tests, and a production dependency audit.
+GitHub Actions runs five jobs on every push and pull request: server tests (with a PostgreSQL service), client lint, typecheck, tests and build, extension tests, a check of the Docker web container (nginx), and a production dependency audit.
 
 ## Design decisions
 

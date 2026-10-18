@@ -1,0 +1,35 @@
+== routing
+ok    / is the app (has the root element)
+ok    /login returns the app, not a 404 (reload works)
+ok    /register returns the app, not a 404 (reload works)
+ok    /?view=week&date=2026-10-05 returns the app, not a 404 (reload works)
+ok    /anything/else returns the app, not a 404 (reload works)
+ok    a missing file under /assets/ is a real 404
+ok    /healthz answers 200
+== the page
+ok    carries a Content-Security-Policy
+ok    ...that names the API in connect-src
+ok    was built for production (a hashed script)
+ok    ...with no dev client in it
+== caching
+ok    index.html is never cached
+ok    a hashed asset is cached for a year
+== compression
+ok    the script is gzipped when the browser accepts it
+== security headers (on the page and on an asset)
+ok    / has x-content-type-options: nosniff
+ok    / has x-frame-options: DENY
+ok    / has referrer-policy: no-referrer
+ok    / has content-security-policy: frame-ancestors 'none'
+ok    /assets/index-BPHCaHNv.js has x-content-type-options: nosniff
+ok    /assets/index-BPHCaHNv.js has x-frame-options: DENY
+ok    /assets/index-BPHCaHNv.js has referrer-policy: no-referrer
+ok    /assets/index-BPHCaHNv.js has content-security-policy: frame-ancestors 'none'
+ok    does not announce the nginx version
+== the image
+ok    the container runs as a non-root user
+ok    there is no Node and no source in the image
+ok    Docker reports the container healthy
+
+26 passed, 0 failed
+image size: 92.3MB
