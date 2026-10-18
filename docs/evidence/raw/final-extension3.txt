@@ -1,0 +1,123 @@
+▶ recording visits
+  ✔ uploads the visit you leave, with its real length and without the tab id (96.7629ms)
+  ✔ ignores a visit shorter than a second (108.3059ms)
+  ✔ never records the dashboard, but does record other localhost pages (170.4694ms)
+  ✔ does not record browser pages (94.1302ms)
+Upload failed, will retry: Failed to fetch
+  ✔ keeps visits while offline and uploads each exactly once when back online (170.941ms)
+Upload failed (500), will retry
+  ✔ uploads a long backlog in batches of 50, oldest first (77.8223ms)
+  ✔ when the server fails part-way through a backlog, keeps the rest and later sends each visit exactly once (110.0645ms)
+  ✔ closes and uploads the open visit when the server says tracking stopped (123.7756ms)
+  ✔ treats a 401 as logged out: forgets the token, keeps the queued visits (110.7461ms)
+✔ recording visits (1065.9098ms)
+▶ one visit is one stay on a site
+  ✔ does not start a new visit when the URL changes inside the site (YouTube, X and other single-page apps) (201.5113ms)
+  ✔ treats a page reload or a query-string change as the same visit (155.5379ms)
+  ✔ treats www and the bare domain as the same site (152.1453ms)
+  ✔ carries the visit over to another tab on the same site, and closing the old tab does not end it (171.7768ms)
+  ✔ still starts a new visit when you move to a different site in the same tab (154.3899ms)
+  ✔ counts leaving a site and coming back as two visits (172.1335ms)
+  ✔ keeps different subdomains apart: docs.google.com and mail.google.com are different sites (140.5841ms)
+  ✔ still ends the visit when the browser loses focus, however much you navigated before (156.9944ms)
+  ✔ still never records the dashboard, even when it is the same host as nothing else (110.0105ms)
+✔ one visit is one stay on a site (1416.5411ms)
+▶ watching or listening without touching the keyboard
+  ✔ keeps counting when you go idle while the tab in front is playing sound, as one visit (217.0328ms)
+  ✔ still ends the visit when you go idle on a silent tab, counting up to that moment (109.7396ms)
+  ✔ ends the visit when the screen is locked, even with sound playing (155.6222ms)
+  ✔ ignores sound changes on a locked screen: nobody is there (138.8315ms)
+  ✔ ends the visit at the moment the sound stops while you are idle, not at your next input (186.522ms)
+  ✔ starts counting again when sound starts while you are idle (the next video in a playlist) (186.1692ms)
+  ✔ ignores sound starting and stopping while you are active (140.799ms)
+  ✔ ignores sound in a tab that is not the one in front (156.6267ms)
+  ✔ ignores sound while the browser is not the app in front (154.1915ms)
+  ✔ does not start counting on sound once the session has been stopped (139.3965ms)
+Failed to fetch tracking status: TypeError: Failed to fetch
+    at globalThis.fetch (file:///C:/Projects/distraction-tracker/extension/test/background.test.mjs:82:31)
+    at refreshTracking (file:///C:/Users/PRIYAN%7E1/AppData/Local/Temp/dt-background-20248-33.mjs:131:25)
+    at async SET_TOKEN (file:///C:/Users/PRIYAN%7E1/AppData/Local/Temp/dt-background-20248-33.mjs:261:5)
+    at async file:///C:/Users/PRIYAN%7E1/AppData/Local/Temp/dt-background-20248-33.mjs:306:35
+Upload failed, will retry: Failed to fetch
+  ✔ never records the dashboard, even when it is playing sound (171.7869ms)
+✔ watching or listening without touching the keyboard (1758.664ms)
+▶ messages from the dashboard
+  ✔ stores a valid token and marks the account connected (58.1349ms)
+  ✔ rejects a token it cannot read, without touching what it has (51.0225ms)
+  ✔ drops the previous user's queued visits when a different account connects (50.9275ms)
+  ✔ keeps the queue when the same account reconnects (it happens on every dashboard load) (43.5756ms)
+  ✔ answers PING with its state so the dashboard can show it (105.7038ms)
+  ✔ on LOGOUT uploads the open visit, then forgets the account (91.2016ms)
+  ✔ on TRACKING_CHANGED after Stop, ends the visit in progress at once, without waiting for the poll (78.7356ms)
+Failed to fetch tracking status: TypeError: Failed to fetch
+    at globalThis.fetch (file:///C:/Projects/distraction-tracker/extension/test/background.test.mjs:82:31)
+    at refreshTracking (file:///C:/Users/PRIYAN%7E1/AppData/Local/Temp/dt-background-20248-38.mjs:131:25)
+    at async TRACKING_CHANGED (file:///C:/Users/PRIYAN%7E1/AppData/Local/Temp/dt-background-20248-38.mjs:269:22)
+    at async file:///C:/Users/PRIYAN%7E1/AppData/Local/Temp/dt-background-20248-38.mjs:306:35
+  ✔ on TRACKING_CHANGED after Start, begins following the tab you are on (112.4638ms)
+  ✔ on TRACKING_CHANGED keeps its last known state if the server cannot be reached, and still answers (45.2628ms)
+  ✔ on TRACKING_CHANGED with no account connected, answers that nothing is being tracked (40.5876ms)
+Upload failed, will retry: Failed to fetch
+  ✔ on TRACKING_CHANGED uploads anything waiting in the queue (112.8926ms)
+  ✔ warns when the server dropped visits recorded outside a session, and still clears the queue (108.3969ms)
+  ✔ ignores messages it does not know (51.3886ms)
+✔ messages from the dashboard (952.3843ms)
+▶ budget alerts from the server
+  ✔ shows one Chrome notification per alert, with the server's title and text and the extension's icon (74.1258ms)
+  ✔ shows each alert once: the next poll has nothing new (109.7682ms)
+  ✔ shows several in order, but never more than three at once (107.5864ms)
+  ✔ shows nothing when there are no alerts (76.4605ms)
+  ✔ keeps tracking state correct while showing alerts (108.9863ms)
+  ✔ copes with malformed alerts without breaking the poll (75.8976ms)
+  ✔ is not stopped by Chrome refusing to show a notification (77.9193ms)
+  ✔ works in a browser that has no notifications API (90.95ms)
+  ✔ shows nothing for a signed-out extension, which never asks the server (92.0682ms)
+  ✔ does not show alerts from an error answer (94.0059ms)
+✔ budget alerts from the server (909.8285ms)
+▶ what a visit keeps (privacy)
+  ✔ records only the site by default: no path, query, fragment or page title (109.5602ms)
+  ✔ keeps a port, for a site running on this computer (123.4526ms)
+Upload failed, will retry: Failed to fetch
+  ✔ holds no page details anywhere while the visit is in progress or waiting to upload (123.2656ms)
+  ✔ records the full address and the title when the switch is on (123.2695ms)
+  ✔ counts only a real true as on, not any other stored value (358.2043ms)
+  ✔ turning the switch off again goes back to the site alone for new visits (171.5085ms)
+  ✔ does not change a visit already under way: it keeps what it started with (139.8777ms)
+  ✔ still treats moving around one site as one visit (184.5978ms)
+✔ what a visit keeps (privacy) (1335.8556ms)
+▶ the popup's privacy switch
+  ✔ starts off, and says that only the site is recorded (3.3131ms)
+  ✔ shows the stored choice when it was switched on earlier (2.8964ms)
+  ✔ stores the choice and updates the explanation when the box is ticked and unticked (2.3341ms)
+  ✔ is a setting the dashboard cannot reach: no message handler touches it (2.8874ms)
+✔ the popup's privacy switch (12.4803ms)
+▶ configureSources
+  ✔ with the built-in addresses changes nothing, which proves the lines it looks for are really there (1.4042ms)
+  ✔ points the code at the new API and dashboard (0.4858ms)
+  ✔ changes only the two permissions in the manifest: the API may be called, the dashboard may send messages (0.4524ms)
+  ✔ produces code that still parses (0.616ms)
+  ✔ tidies the addresses: no trailing slash on the API, and the dashboard reduced to its origin (0.8499ms)
+  ✔ keeps a port, and accepts plain http for this computer only (0.3173ms)
+  ✔ refuses a remote API over plain http (the token would travel unencrypted) (0.455ms)
+  ✔ refuses a remote dashboard over plain http (0.23ms)
+  ✔ refuses something that is not a web address (0.2254ms)
+  ✔ refuses an address with another scheme (0.2427ms)
+  ✔ refuses credentials in the address (0.1907ms)
+  ✔ refuses a query string (0.1698ms)
+  ✔ refuses a fragment (0.1942ms)
+  ✔ says so, instead of silently doing nothing, when the lines it expects have been edited (0.3313ms)
+✔ configureSources (7.0241ms)
+▶ buildExtension
+  ✔ writes a loadable copy: the two changed files, everything else as it was, and no tests (66.3686ms)
+  ✔ can be run again over its own earlier output (79.3062ms)
+  ✔ will not wipe a folder that is not an earlier build (13.7636ms)
+  ✔ will not use the extension's own folder as the output (0.2123ms)
+✔ buildExtension (159.8134ms)
+ℹ tests 82
+ℹ suites 9
+ℹ pass 82
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 7542.853
