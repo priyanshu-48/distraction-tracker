@@ -71,6 +71,7 @@ jobs:
           name: client-coverage
           path: client/coverage/coverage-summary.json
       - run: npm run build
+        timeout-minutes: 3 # about 10 seconds normally; slower means a tooling regression (docs/evidence/build-time-investigation.md)
 
   extension:
     name: Extension tests
