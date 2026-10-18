@@ -37,9 +37,10 @@ Docker. See `build-time-investigation.md`; the build inside the image takes abou
 
 - No hot reload in Docker any more: development uses `npm run dev` in `client/` as before.
 - The API address and extension id are fixed when the image is built, so changing them needs `docker compose up --build`.
-- The extension's manifest still only allows a dashboard on port 5173, so the extension does not connect if `WEB_PORT` is changed
-  (see "Running it on your own domain" in the README for building an extension for other addresses).
+- The extension in `extension/` trusts only a dashboard on port 5173 and an API on port 3000, so it needs rebuilding for other ports.
+  `extension/configure.mjs` does that (checked on 2026-10-18 for ports 3100 and 5273: the built copy's `host_permissions`,
+  `externally_connectable` and both address constants all carry the new ports); the README's "Different ports" paragraph now says how.
 - The check script runs in CI as the `web-container` job (`docker compose up -d --build --wait`, then the script), so the Dockerfile and
   `nginx.conf` cannot rot unnoticed. The same commands were run locally in a separate compose project first (22 s to start, 26 of 26 checks).
-  That job's first run on GitHub had not been seen when this was written.
+  Its first run on GitHub passed (70 s in all: 52 s to build and start the stack, 1 s for the checks): https://github.com/priyanshu-48/distraction-tracker/actions/runs/39152645077
 - Served over plain http on localhost (no TLS); the compose API runs with `COOKIE_SECURE=false` for that reason.

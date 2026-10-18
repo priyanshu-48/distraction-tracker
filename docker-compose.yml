@@ -11,6 +11,9 @@
 # there is no hot reload here. For development run `npm run dev` in client/ as usual. The API address and the extension's id
 # are baked into the page when it is built, so after changing API_PORT or VITE_EXTENSION_ID run `docker compose up --build`.
 # To connect the extension, put its id (chrome://extensions) in a .env file next to this one: VITE_EXTENSION_ID=...
+# The extension itself trusts only the ports built into it (5173 and 3000). With other ports, build it for them first:
+#   node extension/configure.mjs --api http://localhost:<API_PORT>/api --dashboard http://localhost:<WEB_PORT>
+# and load extension/dist (see the README, "Different ports").
 
 services:
   db:
