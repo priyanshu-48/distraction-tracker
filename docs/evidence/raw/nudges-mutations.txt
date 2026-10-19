@@ -1,0 +1,27 @@
+# run 1 (first four extension rows showed 'no result': the parser did not know node's summary line; one SURVIVED: see below)
+caught    exactly at the budget no longer counts as over             -> Tests  2 failed | 142 passed (144)
+caught    the cooldown is gone                                       -> Tests  6 failed | 138 passed (144)
+caught    the holdout is inverted (held-out shown, others hidden)    -> Tests  17 failed | 127 passed (144)
+caught    a budget of 0 counts as always over                        -> Tests  2 failed | 142 passed (144)
+caught    the repeat threshold is off by one                         -> Tests  3 failed | 141 passed (144)
+caught    shown and held-out are swapped in the summary              -> Tests  5 failed | 139 passed (144)
+caught    sites are matched by raw text, not site_key                -> Tests  2 failed | 142 passed (144)
+caught    the cooldown ignores held-out rows                         -> Tests  1 failed | 143 passed (144)
+caught    no open-session check                                      -> Tests  2 failed | 142 passed (144)
+caught    unmarked sites are nudged too                              -> Tests  1 failed | 143 passed (144)
+SURVIVED  a repeated visit id is decided again                       -> Tests  144 passed (144)
+caught    erasing history leaves the nudges                          -> Tests  1 failed | 143 passed (144)
+caught    the extension's token cannot ask for a nudge               -> Tests  33 failed | 111 passed (144)
+caught    any truthy value switches nudges on                        -> no result
+caught    no stale-visit guard: an old answer is shown               -> no result
+caught    the badge is not cleared when the visit ends               -> no result
+caught    the nudge request sends the page address                   -> no result
+caught    the extension asks the wrong route                         -> Tests  2 failed | 10 passed (12)
+
+# run 2: the survivor after adding a test, and the extension rows with the parser fixed
+caught    a repeated visit id is decided again                       -> Tests  1 failed | 144 passed (145)
+caught    any truthy value switches nudges on                        -> ℹ fail 19
+caught    no stale-visit guard: an old answer is shown               -> ℹ fail 1
+caught    the badge is not cleared when the visit ends               -> ℹ fail 5
+caught    the nudge request sends the page address                   -> ℹ fail 1
+caught    the extension asks the wrong route                         -> Tests  2 failed | 10 passed (12)
