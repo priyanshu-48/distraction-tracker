@@ -97,6 +97,7 @@ async function closeCurrent() {
   const { current } = await getSession();
   if (!current) return;
   await chrome.storage.session.remove("current");
+  if (current.nudged) await clearNudge(current.clientEventId); // the moment has passed, whichever way the visit ended
   if (Date.now() - Date.parse(current.startedAt) < 1000) return; // ignore sub-second flickers
   const { tabId, ...interval } = current;
   await enqueue({ ...interval, endedAt: new Date().toISOString() });
@@ -119,6 +120,70 @@ async function showAlerts(alerts) {
     } catch (err) {
       console.error("Failed to show an alert:", err);
     }
+  }
+}
+
+// In-the-moment nudges (decisions.md, D-48), off unless the person ticks the box in the popup ("nudgesEnabled", on this device only;
+// no dashboard message can reach it). As a visit to a new site begins the extension asks the server whether to nudge, sending only
+// the site name and the visit's id. The server decides (it knows the budget, the marked sites and the recent visits); the extension
+// only shows the answer, and only if that visit is still the one in progress. Everything here is best effort: a slow or failing
+// answer, or a browser without chrome.action or notifications, must never get in the way of tracking.
+const NUDGE_TIMEOUT_MS = 3000;
+const NUDGE_BADGE_COLOR = "#d93025";
+
+async function clearNudge(visitId) {
+  try {
+    await chrome.action?.setBadgeText({ text: "" });
+    if (visitId) await chrome.notifications?.clear?.(`dt-nudge-${visitId}`);
+  } catch (err) {
+    console.warn("Could not clear a nudge:", err?.message);
+  }
+}
+
+// Only text that fits a notification is shown, and only the two fields we use.
+function asNudge(answer) {
+  const nudge = answer?.nudge;
+  if (!nudge || typeof nudge.title !== "string" || typeof nudge.body !== "string") return null;
+  return { title: nudge.title.slice(0, 120), body: nudge.body.slice(0, 300) };
+}
+
+// Runs inside serial(): shows the nudge, unless the person has already moved on from the visit it was for.
+async function applyNudge(visitId, nudge) {
+  const { current } = await getSession();
+  if (current?.clientEventId !== visitId) return;
+  await chrome.storage.session.set({ current: { ...current, nudged: true } });
+  try {
+    await chrome.notifications?.create(`dt-nudge-${visitId}`, {
+      type: "basic",
+      iconUrl: chrome.runtime.getURL("assets/ext-icon.png"),
+      title: nudge.title,
+      message: nudge.body,
+    });
+    await chrome.action?.setBadgeBackgroundColor({ color: NUDGE_BADGE_COLOR });
+    await chrome.action?.setBadgeText({ text: "!" });
+  } catch (err) {
+    console.error("Failed to show a nudge:", err);
+  }
+}
+
+// Not awaited by startFor, so a slow answer never holds up tracking.
+async function maybeNudge(visit) {
+  try {
+    if ((await chrome.storage.local.get("nudgesEnabled")).nudgesEnabled !== true) return;
+    const token = await getToken();
+    if (!token) return;
+    const zone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const res = await fetch(`${API}/nudges?tz=${encodeURIComponent(zone)}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ site: siteOf(visit.url), visit: visit.clientEventId }),
+      signal: AbortSignal.timeout(NUDGE_TIMEOUT_MS),
+    });
+    if (!res.ok) return;
+    const nudge = asNudge(await res.json());
+    if (nudge) await serial(() => applyNudge(visit.clientEventId, nudge));
+  } catch (err) {
+    console.warn("Nudge skipped:", err?.message);
   }
 }
 
@@ -184,16 +249,16 @@ async function startFor(tab) {
   }
   await closeCurrent();
   const { url, title } = await whatToKeep(tab);
-  await chrome.storage.session.set({
-    current: {
-      tabId: tab.id,
-      clientEventId: crypto.randomUUID(),
-      url,
-      domain: new URL(tab.url).hostname,
-      title,
-      startedAt: new Date().toISOString()
-    }
-  });
+  const visit = {
+    tabId: tab.id,
+    clientEventId: crypto.randomUUID(),
+    url,
+    domain: new URL(tab.url).hostname,
+    title,
+    startedAt: new Date().toISOString()
+  };
+  await chrome.storage.session.set({ current: visit });
+  void maybeNudge(visit);
 }
 
 async function followActiveTab() {
@@ -306,6 +371,10 @@ chrome.runtime.onMessageExternal.addListener((request, sender, sendResponse) => 
   serial(async () => sendResponse(await handle(request)));
   return true;
 });
+
+// A badge can outlive the visit it was for (a browser closed mid-visit); start clean.
+chrome.runtime.onStartup?.addListener(() => void clearNudge());
+chrome.runtime.onInstalled?.addListener(() => void clearNudge());
 
 chrome.alarms.create("poll", { periodInMinutes: 0.5 });
 chrome.alarms.onAlarm.addListener((alarm) => {

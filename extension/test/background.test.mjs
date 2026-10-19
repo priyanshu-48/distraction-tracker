@@ -50,6 +50,8 @@ async function createWorld() {
   const listeners = {};
   const event = (name) => ({ addListener: (fn) => (listeners[name] ??= []).push(fn) });
   const shown = []; // every Chrome notification the extension asked for
+  const cleared = []; // ids of notifications it took down again
+  const badge = { text: "", color: null, history: [] };
   const notifyBehavior = { fail: false };
   let activeTab;
   let idleState = "active";
@@ -67,17 +69,34 @@ async function createWorld() {
     },
     windows: { onFocusChanged: event("focus"), WINDOW_ID_NONE: -1, getLastFocused: async () => ({ focused: windowFocused }) },
     alarms: { create() {}, onAlarm: event("alarm") },
-    runtime: { onMessageExternal: event("external"), getManifest: () => ({ version: "0.1.0" }), getURL: (path) => `chrome-extension://test/${path}` },
+    runtime: {
+      onMessageExternal: event("external"),
+      onStartup: event("startup"),
+      onInstalled: event("installed"),
+      getManifest: () => ({ version: "0.1.0" }),
+      getURL: (path) => `chrome-extension://test/${path}`,
+    },
     notifications: {
       create: async (id, options) => {
         if (notifyBehavior.fail) throw new Error("notifications are blocked");
         shown.push({ id, ...options });
       },
+      clear: async (id) => void cleared.push(id),
+    },
+    // The toolbar badge: `badge.text` is what is showing now, `badge.history` every text ever set.
+    action: {
+      setBadgeText: async ({ text }) => {
+        badge.text = text;
+        badge.history.push(text);
+      },
+      setBadgeBackgroundColor: async ({ color }) => void (badge.color = color),
     },
   };
 
   // `alerts` are handed over once, like the real server does: answering the poll empties them.
-  const server = { tracking: true, online: true, status: 200, uploads: [], batches: [], failAfterBatches: null, rejected: 0, alerts: [] };
+  // `nudgeAnswer` is what POST /nudges returns; `nudgeGate` (a promise) holds the answer back; `nudgeRequests` records what was sent.
+  const server = { tracking: true, online: true, status: 200, uploads: [], batches: [], failAfterBatches: null, rejected: 0, alerts: [],
+    nudgeAnswer: { nudge: null }, nudgeStatus: 200, nudgeGate: null, nudgeFails: false, nudgeRequests: [] };
   globalThis.fetch = async (url, options = {}) => {
     if (!server.online) throw new TypeError("Failed to fetch");
     if (url.includes("/is-tracking")) {
@@ -97,6 +116,12 @@ async function createWorld() {
       }
       return { ok: status === 200, status, text: async () => "", json: async () => ({ success: true, rejected: server.rejected }) };
     }
+    if (url.includes("/nudges")) {
+      server.nudgeRequests.push({ url, method: options.method, headers: options.headers, body: JSON.parse(options.body), signal: options.signal });
+      if (server.nudgeGate) await server.nudgeGate;
+      if (server.nudgeFails) throw new TypeError("Failed to fetch");
+      return { ok: server.nudgeStatus === 200, status: server.nudgeStatus, json: async () => server.nudgeAnswer };
+    }
     throw new Error(`unexpected request ${url}`);
   };
 
@@ -108,6 +133,9 @@ async function createWorld() {
     session,
     server,
     shown,
+    cleared,
+    badge,
+    settle,
     notifyBehavior,
     advance: (seconds) => void (clock.now += seconds * 1000),
     token: (id) => `h.${Buffer.from(JSON.stringify({ id })).toString("base64")}.s`,
@@ -848,12 +876,14 @@ describe("the popup's privacy switch", () => {
       local,
       box: element("details"),
       hint: element("details-hint"),
-      /** The user ticks or unticks the box. */
-      async toggle(on) {
+      nudgeBox: element("nudges"),
+      nudgeHint: element("nudges-hint"),
+      /** The user ticks or unticks a box (the details box by default, or the one with the given id). */
+      async toggle(on, id = "details") {
         globalThis.chrome = { storage: { local: { set: async (values) => void Object.assign(local, values) } } };
         try {
-          element("details").checked = on;
-          await element("details").handlers.change();
+          element(id).checked = on;
+          await element(id).handlers.change();
         } finally {
           delete globalThis.chrome;
         }
@@ -887,5 +917,325 @@ describe("the popup's privacy switch", () => {
     const background = readFileSync(fileURLToPath(new URL("../background.js", import.meta.url)), "utf8");
     const handlers = background.slice(background.indexOf("const dashboardMessages"), background.indexOf("chrome.runtime.onMessageExternal.addListener"));
     assert.ok(!handlers.includes("recordDetails"), "no dashboard message may read or write the privacy switch");
+  });
+
+  describe("the nudge switch", () => {
+    it("starts off, and says nothing is sent when a site is opened", async () => {
+      const popup = await openPopup();
+      assert.equal(popup.nudgeBox.checked, false);
+      assert.match(popup.nudgeHint.textContent, /nothing is sent/);
+    });
+
+    it("shows the stored choice when it was switched on earlier, and what turning it on means", async () => {
+      const popup = await openPopup({ nudgesEnabled: true });
+      assert.equal(popup.nudgeBox.checked, true);
+      assert.match(popup.nudgeHint.textContent, /never the address or title/);
+      assert.match(popup.nudgeHint.textContent, /skipped on purpose/); // the holdout is explained, not hidden
+    });
+
+    it("counts only a real true as on, not any other stored value", async () => {
+      for (const value of ["true", 1, "yes", null, false]) {
+        const popup = await openPopup({ nudgesEnabled: value });
+        assert.equal(popup.nudgeBox.checked, false, `${String(value)} must not show the box as ticked`);
+      }
+    });
+
+    it("stores the choice and updates the explanation when ticked and unticked", async () => {
+      const popup = await openPopup();
+      await popup.toggle(true, "nudges");
+      assert.equal(popup.local.nudgesEnabled, true);
+      assert.match(popup.nudgeHint.textContent, /never the address or title/);
+      await popup.toggle(false, "nudges");
+      assert.equal(popup.local.nudgesEnabled, false);
+      assert.match(popup.nudgeHint.textContent, /nothing is sent/);
+    });
+
+    it("is independent of the details switch", async () => {
+      const popup = await openPopup();
+      await popup.toggle(true, "nudges");
+      assert.equal(popup.local.recordDetails, undefined);
+      await popup.toggle(true);
+      await popup.toggle(false, "nudges");
+      assert.equal(popup.local.recordDetails, true);
+    });
+  });
+});
+
+describe("in-the-moment nudges (D-48)", () => {
+  let world;
+  beforeEach(async () => {
+    world = await createWorld();
+    await world.startTracking();
+  });
+
+  const NUDGE = { nudge: { kind: "over-budget", title: "Over budget, and you just opened youtube.com", body: "1h 5m of 1h used today. Is this visit worth it?" } };
+  const enable = () => world.local.set({ nudgesEnabled: true });
+  const current = async () => (await world.session.get("current")).current;
+  const askedFor = () => world.server.nudgeRequests;
+
+  describe("off unless the person turns it on", () => {
+    it("sends nothing and shows nothing by default", async () => {
+      world.server.nudgeAnswer = NUDGE;
+      await world.goTo(1, "https://www.youtube.com/watch?v=abc");
+      assert.equal(askedFor().length, 0);
+      assert.deepEqual(world.shown, []);
+      assert.equal(world.badge.text, "");
+    });
+
+    it("counts only a real true as on", async () => {
+      world.server.nudgeAnswer = NUDGE;
+      const sites = ["a.com", "b.com", "c.com", "d.com", "e.com"];
+      for (const [i, value] of ["true", 1, "yes", null, false].entries()) {
+        await world.local.set({ nudgesEnabled: value });
+        await world.goTo(i + 1, `https://${sites[i]}/`);
+      }
+      assert.equal(askedFor().length, 0);
+    });
+
+    it("does not ask about a visit that was already under way when it was switched on", async () => {
+      await world.goTo(1, "https://www.youtube.com/");
+      await enable();
+      await world.goTo(1, "https://www.youtube.com/watch?v=abc"); // the same site: the same visit
+      assert.equal(askedFor().length, 0);
+    });
+  });
+
+  describe("asking", () => {
+    beforeEach(enable);
+
+    it("sends only the site and the visit's id, to the nudge route, with the login and the person's time zone", async () => {
+      await world.goTo(1, "https://www.youtube.com/watch?v=abc123&list=PLprivate#t=30");
+      assert.equal(askedFor().length, 1);
+      const [request] = askedFor();
+      assert.equal(request.method, "POST");
+      assert.match(request.url, /\/nudges\?tz=/);
+      assert.ok(request.url.includes(encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone)));
+      assert.deepEqual(Object.keys(request.body).sort(), ["site", "visit"]);
+      assert.equal(request.body.site, "youtube.com"); // no www, no path
+      assert.equal(request.body.visit, (await current()).clientEventId);
+      assert.match(request.headers.Authorization, /^Bearer /);
+      const everything = JSON.stringify(request);
+      for (const leaked of ["watch", "abc123", "PLprivate"]) assert.ok(!everything.includes(leaked), `${leaked} must not be sent`);
+    });
+
+    it("asks once per visit, not for every page on the same site", async () => {
+      await world.goTo(1, "https://www.youtube.com/");
+      world.advance(5);
+      await world.goTo(1, "https://www.youtube.com/@someone");
+      await world.goTo(2, "https://www.youtube.com/watch?v=1"); // another tab, same site
+      assert.equal(askedFor().length, 1);
+    });
+
+    it("asks again for each new site", async () => {
+      await world.goTo(1, "https://www.youtube.com/");
+      world.advance(5);
+      await world.goTo(1, "https://github.com/");
+      assert.deepEqual(askedFor().map((r) => r.body.site), ["youtube.com", "github.com"]);
+    });
+
+    it("gives the request a time limit, so a slow server cannot hold anything up", async () => {
+      await world.goTo(1, "https://www.youtube.com/");
+      const { signal } = askedFor()[0];
+      assert.ok(signal instanceof AbortSignal);
+      assert.equal(signal.aborted, false);
+    });
+
+    it("does not ask when tracking is off: no visit is even started", async () => {
+      await world.session.set({ tracking: false, checkedAt: Date.now() + 3_600_000 });
+      await world.goTo(1, "https://www.youtube.com/");
+      assert.equal(askedFor().length, 0);
+    });
+
+    it("does not ask about the dashboard", async () => {
+      await world.goTo(1, "http://localhost:5173/");
+      assert.equal(askedFor().length, 0);
+    });
+
+    it("does not ask without a login", async () => {
+      await world.local.remove("token");
+      await world.goTo(1, "https://www.youtube.com/");
+      assert.equal(askedFor().length, 0);
+    });
+  });
+
+  describe("showing", () => {
+    beforeEach(enable);
+
+    it("shows a notification and a red badge for the visit it was decided for", async () => {
+      world.server.nudgeAnswer = NUDGE;
+      await world.goTo(1, "https://www.youtube.com/");
+      const id = (await current()).clientEventId;
+      assert.equal(world.shown.length, 1);
+      assert.equal(world.shown[0].id, `dt-nudge-${id}`);
+      assert.equal(world.shown[0].title, NUDGE.nudge.title);
+      assert.equal(world.shown[0].message, NUDGE.nudge.body);
+      assert.equal(world.shown[0].iconUrl, "chrome-extension://test/assets/ext-icon.png");
+      assert.equal(world.badge.text, "!");
+      assert.equal(world.badge.color, "#d93025");
+      assert.equal((await current()).nudged, true);
+    });
+
+    it("shows nothing when the server says there is nothing to say", async () => {
+      world.server.nudgeAnswer = { nudge: null };
+      await world.goTo(1, "https://www.youtube.com/");
+      assert.deepEqual(world.shown, []);
+      assert.equal(world.badge.text, "");
+      assert.notEqual((await current()).nudged, true);
+    });
+
+    it("keeps long text to what fits a notification", async () => {
+      world.server.nudgeAnswer = { nudge: { title: "t".repeat(500), body: "b".repeat(2000) } };
+      await world.goTo(1, "https://www.youtube.com/");
+      assert.equal(world.shown[0].title.length, 120);
+      assert.equal(world.shown[0].message.length, 300);
+    });
+
+    it("shows nothing for an answer that is not the shape it expects", async () => {
+      let n = 0;
+      for (const answer of [{}, null, { nudge: "yes" }, { nudge: { title: 5, body: "x" } }, { nudge: { title: "x" } }, { nudge: [] }]) {
+        world.server.nudgeAnswer = answer;
+        await world.goTo(1, `https://site${n++}.com/`);
+      }
+      assert.deepEqual(world.shown, []);
+      assert.equal(world.badge.text, "");
+    });
+
+    it("shows nothing for an error answer, and tracking carries on", async () => {
+      world.server.nudgeAnswer = NUDGE;
+      for (const status of [401, 403, 500]) {
+        world.server.nudgeStatus = status;
+        await world.goTo(1, `https://s${status}.com/`);
+      }
+      assert.deepEqual(world.shown, []);
+      assert.ok((await current()).clientEventId);
+    });
+
+    it("carries on tracking when the request fails outright", async () => {
+      world.server.nudgeFails = true;
+      await world.goTo(1, "https://www.youtube.com/");
+      world.advance(30);
+      await world.goTo(2, "https://github.com/");
+      assert.deepEqual(world.server.uploads.map((v) => v.domain), ["www.youtube.com"]); // the visit was recorded as normal
+      assert.deepEqual(world.shown, []);
+    });
+
+    it("shows nothing if the person has already moved on by the time the answer comes", async () => {
+      let release;
+      world.server.nudgeGate = new Promise((resolve) => (release = resolve));
+      world.server.nudgeAnswer = NUDGE;
+      await world.goTo(1, "https://www.youtube.com/");
+      world.advance(5);
+      await world.goTo(2, "http://localhost:5173/"); // left for a page that is never recorded, before the answer arrived
+      release();
+      await world.settle();
+      assert.deepEqual(world.shown, []);
+      assert.equal(world.badge.text, "");
+      assert.deepEqual(world.badge.history, []);
+    });
+
+    it("shows the nudge once a slow answer does arrive, if the person is still on that visit", async () => {
+      let release;
+      world.server.nudgeGate = new Promise((resolve) => (release = resolve));
+      world.server.nudgeAnswer = NUDGE;
+      await world.goTo(1, "https://www.youtube.com/");
+      assert.deepEqual(world.shown, []);
+      release();
+      await world.settle();
+      assert.equal(world.shown.length, 1);
+    });
+
+    it("still shows the badge where notifications are not available, and the notification where there is no badge", async () => {
+      world.server.nudgeAnswer = NUDGE;
+      delete globalThis.chrome.notifications;
+      await world.goTo(1, "https://www.youtube.com/");
+      assert.equal(world.badge.text, "!");
+
+      delete globalThis.chrome.action;
+      globalThis.chrome.notifications = { create: async (id, options) => void world.shown.push({ id, ...options }), clear: async () => {} };
+      world.advance(5);
+      await world.goTo(1, "https://github.com/");
+      assert.equal(world.shown.length, 1);
+    });
+
+    it("does not let a blocked notification get in the way of tracking", async () => {
+      world.server.nudgeAnswer = NUDGE;
+      world.notifyBehavior.fail = true;
+      const errors = [];
+      const original = console.error;
+      console.error = (...args) => errors.push(args);
+      try {
+        await world.goTo(1, "https://www.youtube.com/");
+        world.advance(30);
+        await world.goTo(2, "https://github.com/");
+      } finally {
+        console.error = original;
+      }
+      assert.equal(world.server.uploads.length, 1);
+      assert.ok(errors.length > 0);
+    });
+  });
+
+  describe("taking it down again", () => {
+    beforeEach(async () => {
+      await enable();
+      world.server.nudgeAnswer = NUDGE;
+      await world.goTo(1, "https://www.youtube.com/");
+      assert.equal(world.badge.text, "!");
+    });
+
+    it("clears the badge and the notification when the person leaves the site", async () => {
+      const id = (await current()).clientEventId;
+      world.server.nudgeAnswer = { nudge: null }; // nothing to say about the next site
+      world.advance(5);
+      await world.goTo(2, "https://github.com/");
+      assert.equal(world.badge.text, "");
+      assert.ok(world.cleared.includes(`dt-nudge-${id}`));
+    });
+
+    it("clears them when the tab is closed", async () => {
+      world.advance(5);
+      await world.fire("removed", 1);
+      assert.equal(world.badge.text, "");
+    });
+
+    it("clears them when the person goes idle", async () => {
+      world.advance(70);
+      await world.setIdle("idle");
+      assert.equal(world.badge.text, "");
+    });
+
+    it("clears them when the session is stopped", async () => {
+      world.server.tracking = false;
+      await world.session.set({ checkedAt: 0 }); // the cached answer is old, so the poll asks the server
+      await world.fire("alarm", { name: "poll" });
+      assert.equal(world.badge.text, "");
+    });
+
+    it("clears them on logout", async () => {
+      await world.message({ type: "LOGOUT" });
+      assert.equal(world.badge.text, "");
+    });
+
+    it("clears a badge left over from before when the browser starts or the extension is installed", async () => {
+      await world.session.remove("current"); // as if the browser had been closed mid-visit: nothing remembers the visit
+      world.badge.text = "!";
+      await world.fire("startup");
+      assert.equal(world.badge.text, "");
+      world.badge.text = "!";
+      await world.fire("installed");
+      assert.equal(world.badge.text, "");
+    });
+
+    it("leaves the badge alone while the person stays on the site", async () => {
+      world.advance(5);
+      await world.goTo(1, "https://www.youtube.com/watch?v=2"); // the same site: still that visit
+      assert.equal(world.badge.text, "!");
+    });
+  });
+
+  it("is a setting no dashboard message can touch", () => {
+    const background = readFileSync(fileURLToPath(new URL("../background.js", import.meta.url)), "utf8");
+    const handlers = background.slice(background.indexOf("const dashboardMessages"), background.indexOf("chrome.runtime.onMessageExternal.addListener"));
+    assert.ok(!handlers.includes("nudgesEnabled"), "no dashboard message may read or write the nudge switch");
   });
 });

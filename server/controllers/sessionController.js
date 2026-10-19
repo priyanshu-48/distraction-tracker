@@ -16,8 +16,8 @@ export async function logout(req, res) {
 }
 
 /**
- * A token for the extension. It can upload visits and read whether tracking is on, nothing else, so if it leaks it
- * cannot export or delete anything. It lasts 30 days because the extension has no way to refresh it; the dashboard
+ * A token for the extension. It can upload visits, read whether tracking is on and ask whether to nudge (the answer is text
+ * about the visit it is asked for, or nothing), and nothing else, so if it leaks it cannot export or delete anything. It lasts 30 days because the extension has no way to refresh it; the dashboard
  * hands over a new one every time it loads.
  */
 export async function extensionToken(req, res) {

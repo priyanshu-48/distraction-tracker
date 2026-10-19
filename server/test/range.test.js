@@ -251,3 +251,68 @@ describe("time zones decide which day a visit is on", () => {
     expect(heatmap[1][11]).toBe(600); // 11:00 to 11:10
   });
 });
+
+describe("nudges in the range summary (D-48)", () => {
+  /** A nudge decided at `when`, for a visit that lasted `seconds` (or for none that ever reached the server, when null). */
+  async function nudge(user, { when, shown = true, seconds }) {
+    const id = randomUUID();
+    await db.query("INSERT INTO nudges (user_id, client_event_id, site, kind, shown, created_at) VALUES ($1, $2, 'reddit.com', 'over-budget', $3, $4)", [user.id, id, shown, when]);
+    if (seconds !== null) {
+      await db.query(
+        `INSERT INTO tab_activity (user_id, client_event_id, url, domain, title, started_at, ended_at, duration)
+         VALUES ($1, $2, 'https://reddit.com/', 'reddit.com', '', $3, $4, $5)`,
+        [user.id, id, when, new Date(when.getTime() + seconds * 1000), seconds]
+      );
+    }
+  }
+
+  it("is null for a user with no nudges, so the response keeps its old shape", async () => {
+    const user = await seeded();
+    expect((await range(user)).nudges).toBeNull();
+  });
+
+  it("counts shown and held-out nudges, and how many visits were 60 seconds or less", async () => {
+    const user = await makeUser();
+    await nudge(user, { when: at("2026-03-10", "10:00"), seconds: 20 }); // shown, left
+    await nudge(user, { when: at("2026-03-10", "11:00"), seconds: 400 }); // shown, stayed
+    await nudge(user, { when: at("2026-03-11", "10:00"), shown: false, seconds: 30 }); // held out, left
+    await nudge(user, { when: at("2026-03-11", "11:00"), shown: false, seconds: 900 }); // held out, stayed
+    await nudge(user, { when: at("2026-03-12", "10:00"), seconds: null }); // shown, visit never uploaded
+    expect((await range(user)).nudges).toEqual({ nudged: 3, shown: 2, shownLeft: 1, heldOut: 2, heldOutLeft: 1, unmatched: 1, comparable: false });
+  });
+
+  it("only looks at the period being shown: a nudge from last week or next week is not counted", async () => {
+    const user = await makeUser();
+    await nudge(user, { when: at("2026-03-04", "10:00"), seconds: 20 }); // previous week
+    await nudge(user, { when: at("2026-03-16", "00:30"), seconds: 20 }); // the Monday after
+    await nudge(user, { when: at("2026-03-10", "10:00"), seconds: 20 }); // this week
+    expect((await range(user)).nudges).toMatchObject({ nudged: 1, shown: 1 });
+  });
+
+  it("puts a nudge on the day it was decided in the user's own time zone", async () => {
+    const user = await makeUser();
+    await nudge(user, { when: at("2026-03-15", "20:00"), seconds: 20 }); // Sunday 20:00Z is Monday 01:30 in Kolkata: next week there
+    expect((await range(user, "week", "2026-03-11", "UTC")).nudges).toMatchObject({ nudged: 1 });
+    expect((await range(user, "week", "2026-03-11", "Asia/Kolkata")).nudges).toBeNull();
+  });
+
+  it("does not count another user's nudges", async () => {
+    const user = await makeUser();
+    const other = await makeUser();
+    await nudge(other, { when: at("2026-03-10", "10:00"), seconds: 20 });
+    expect((await range(user)).nudges).toBeNull();
+  });
+
+  it("says the groups are comparable once each has at least 5", async () => {
+    const user = await makeUser();
+    for (let i = 0; i < 5; i++) await nudge(user, { when: at("2026-03-10", `0${i + 1}:00`), seconds: 20 });
+    for (let i = 0; i < 5; i++) await nudge(user, { when: at("2026-03-11", `0${i + 1}:00`), shown: false, seconds: 200 });
+    expect((await range(user)).nudges).toMatchObject({ shown: 5, heldOut: 5, comparable: true });
+  });
+
+  it("is in the month view too", async () => {
+    const user = await makeUser();
+    await nudge(user, { when: at("2026-03-03", "10:00"), seconds: 20 });
+    expect((await range(user, "month", "2026-03-15")).nudges).toMatchObject({ nudged: 1 });
+  });
+});

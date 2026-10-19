@@ -58,4 +58,19 @@ export interface RangeSummary {
   movers: { up: Mover[]; down: Mover[] };
   /** 7 weekdays (Monday first) by 24 hours of distraction seconds. */
   heatmap: number[][];
+  /** How the nudges did in this period; null when none were decided in it (see server/domain/nudges.js). */
+  nudges: {
+    /** Nudges that were shown. */
+    nudged: number;
+    /** Of the shown ones whose visit reached the server, and how many of those lasted a minute or less. */
+    shown: number;
+    shownLeft: number;
+    /** The same for nudges held back on purpose, the comparison group. */
+    heldOut: number;
+    heldOutLeft: number;
+    /** Decided for visits that never reached the server; counted in neither group. */
+    unmatched: number;
+    /** True when both groups have at least 5, so comparing them means something. */
+    comparable: boolean;
+  } | null;
 }

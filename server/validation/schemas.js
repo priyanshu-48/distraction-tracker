@@ -53,6 +53,9 @@ const siteDomain = z
   .refine((d) => d.length > 0, "must be a hostname such as youtube.com");
 
 export const siteParamsSchema = z.object({ domain: siteDomain });
+
+// The extension asks whether to nudge as a visit begins: the site (a hostname, never a URL) and the id of that visit.
+export const nudgeSchema = z.object({ site: siteDomain, visit: z.uuid() });
 export const markSiteSchema = z.object({ marked: z.boolean() });
 
 export const listSitesQuerySchema = z.object({

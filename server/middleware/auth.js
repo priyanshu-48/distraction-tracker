@@ -10,7 +10,7 @@ const deny = (res, error, message = 'Please login again') => res.status(401).jso
  *
  *  - The user must still exist and the token's version must match the user's, so deleting an account or logging
  *    out (which bumps the version) ends every token issued before.
- *  - `allowed` lists the token scopes a route accepts. Most routes take only "user"; the two the extension calls
+ *  - `allowed` lists the token scopes a route accepts. Most routes take only "user"; the three the extension calls
  *    also take "ingest", which cannot read data or delete anything.
  *  - A request authenticated by the cookie that changes something must carry `X-Requested-With: dt`. A page on
  *    another site cannot add that header without a CORS preflight that the origin allowlist refuses.
@@ -59,5 +59,5 @@ function requireAuth(allowed) {
 
 /** The default: a full user token only. */
 export default requireAuth([SCOPES.user]);
-/** For the two routes the extension calls: a user token, or the extension's limited one. */
+/** For the three routes the extension calls (upload visits, read the tracking state, ask about a nudge): a user token, or the extension's limited one. */
 export const authenticateIngest = requireAuth([SCOPES.user, SCOPES.ingest]);

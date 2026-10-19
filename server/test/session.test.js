@@ -158,11 +158,12 @@ describe("the extension's token", () => {
     await http().post("/api/auth/extension-token").expect(401);
   });
 
-  it("can upload visits and read whether tracking is on", async () => {
+  it("can upload visits, read whether tracking is on, and ask whether to nudge (and nothing else)", async () => {
     const user = await makeUser();
     const ext = bearer(await extensionToken(user));
     expect((await http().get("/api/is-tracking").set(ext).expect(200)).body).toEqual({ isTracking: false });
     await http().post("/api/intervals").set(ext).send({ intervals: [] }).expect(400); // reached the handler: it is the empty batch that is refused
+    expect((await http().post("/api/nudges").set(ext).send({ site: "youtube.com", visit: "ffffffff-0000-4000-8000-000000000001" }).expect(200)).body).toEqual({ nudge: null });
   });
 
   it.each([

@@ -4,6 +4,7 @@ import { EmptyState, ErrorState } from "@/components/ui/states";
 import { BestWorst } from "./BestWorst";
 import { FirstDistractionTrend } from "./FirstDistractionTrend";
 import { Heatmap } from "./Heatmap";
+import { NudgesCard } from "./NudgesCard";
 import { useRangeSummary } from "./queries";
 import { RangeHero } from "./RangeHero";
 import { Movers, RangeTopSites } from "./RangeCards";
@@ -59,6 +60,7 @@ export function RangeView({ view, date, label, isCurrent, today, onOpenDay }: Ra
       <div className="space-y-4">
         <Movers movers={summary.movers} view={view} />
         <BestWorst best={summary.best} worst={summary.worst} />
+        <NudgesCard nudges={summary.nudges} />
       </div>
       <div className="lg:col-span-2">
         <Heatmap heatmap={summary.heatmap} view={view} />

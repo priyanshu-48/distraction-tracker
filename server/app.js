@@ -15,6 +15,7 @@ import summaryRoute from './routes/summaryRoute.js';
 import rangeRoute from './routes/rangeRoute.js';
 import accountRoute from './routes/accountRoute.js';
 import notificationRoute from './routes/notificationRoute.js';
+import nudgeRoute from './routes/nudgeRoute.js';
 
 const app = express();
 const origins = (process.env.CORS_ORIGINS || "http://localhost:5173").split(",");
@@ -53,6 +54,7 @@ app.use("/api",summaryRoute);
 app.use("/api",rangeRoute);
 app.use("/api",accountRoute);
 app.use("/api",notificationRoute);
+app.use("/api",nudgeRoute);
 
 app.use(notFound);
 app.use(errorHandler);

@@ -1,6 +1,6 @@
 (async () => {
-  const [{ token, authState, queue = [], recordDetails }, { tracking }] = await Promise.all([
-    chrome.storage.local.get(["token", "authState", "queue", "recordDetails"]),
+  const [{ token, authState, queue = [], recordDetails, nudgesEnabled }, { tracking }] = await Promise.all([
+    chrome.storage.local.get(["token", "authState", "queue", "recordDetails", "nudgesEnabled"]),
     chrome.storage.session.get("tracking"),
   ]);
 
@@ -34,5 +34,21 @@
   details.addEventListener("change", async () => {
     await chrome.storage.local.set({ recordDetails: details.checked });
     describe(details.checked);
+  });
+
+  // Also on this device only. On means: as a visit begins, the site name (never the address or title) goes to your server, which
+  // decides whether to nudge. Now and then a nudge is skipped on purpose so the dashboard can show whether nudges help.
+  const nudges = document.getElementById("nudges");
+  const nudgesHint = document.getElementById("nudges-hint");
+  const describeNudges = (on) => {
+    nudgesHint.textContent = on
+      ? "On: when you open a site, its name (never the address or title) is sent to your server. Now and then a nudge is skipped on purpose, to measure whether nudges help."
+      : "Off: nothing is sent when you open a site.";
+  };
+  nudges.checked = nudgesEnabled === true;
+  describeNudges(nudges.checked);
+  nudges.addEventListener("change", async () => {
+    await chrome.storage.local.set({ nudgesEnabled: nudges.checked });
+    describeNudges(nudges.checked);
   });
 })();

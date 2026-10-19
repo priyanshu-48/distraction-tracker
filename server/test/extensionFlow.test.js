@@ -1,4 +1,4 @@
-import { afterAll, afterEach, beforeAll, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { configureSources } from "../../extension/configure.mjs";
@@ -50,7 +50,10 @@ function installBrowser(code = source) {
   const event = (name) => ({ addListener: (fn) => (listeners[name] ??= []).push(fn) });
   let activeTab;
 
-  const calls = []; // every request the extension made: { url (as the extension wrote it), method, path, status }
+  const shown = []; // every Chrome notification it asked for
+  const cleared = []; // ids of notifications it took down again
+  const badge = { text: "", history: [] }; // the toolbar badge
+  const calls = []; // every request the extension made: { url (as the extension wrote it), method, path, status, body }
   const faults = { loseUploadAnswers: 0 }; // how many upload answers to lose on their way back
 
   const realFetch = globalThis.fetch;
@@ -58,7 +61,7 @@ function installBrowser(code = source) {
     const target = String(url).replace("http://localhost:3000", baseUrl); // the extension has the address built in
     const res = await realFetch(target, init); // the server really receives and handles the request
     const path = new URL(target).pathname;
-    calls.push({ url: String(url), method: init?.method ?? "GET", path, status: res.status });
+    calls.push({ url: String(url), method: init?.method ?? "GET", path, status: res.status, body: init?.body });
     if (path === "/api/intervals" && faults.loseUploadAnswers > 0) {
       faults.loseUploadAnswers--;
       throw new TypeError("Failed to fetch"); // the server answered, but the browser never got it
@@ -79,6 +82,14 @@ function installBrowser(code = source) {
     windows: { onFocusChanged: event("focus"), WINDOW_ID_NONE: -1, getLastFocused: async () => ({ focused: true }) },
     alarms: { create() {}, onAlarm: event("alarm") },
     runtime: { onMessageExternal: event("external"), getManifest: () => ({ version: "test" }), getURL: (path) => path },
+    notifications: { create: async (id, options) => void shown.push({ id, ...options }), clear: async (id) => void cleared.push(id) },
+    action: {
+      setBadgeText: async ({ text }) => {
+        badge.text = text;
+        badge.history.push(text);
+      },
+      setBadgeBackgroundColor: async () => {},
+    },
   };
   new Function(code)(); // runs background.js against the fake chrome above
 
@@ -86,6 +97,9 @@ function installBrowser(code = source) {
     local,
     calls,
     faults,
+    shown,
+    cleared,
+    badge,
     queue: () => local.data.queue ?? [],
     uninstall() {
       globalThis.fetch = realFetch;
@@ -262,5 +276,93 @@ describe("the extension and the API together", () => {
     expect(new Date(rows[0].started_at) >= new Date(sessions[0].start_time)).toBe(true);
     expect(new Date(rows[0].ended_at) <= new Date(sessions[0].end_time)).toBe(true); // never beyond the session's end
     expect(browser.queue()).toHaveLength(0);
+  });
+});
+
+describe("in-the-moment nudges, from the browser to the database and back to the dashboard (D-48)", () => {
+  const shownId = "ffffffff-0000-4000-8000-000000000001"; // the first 32 bits decide the holdout: this one is always shown
+  const heldId = "00000000-0000-4000-8000-000000000002"; // and this one is always held back
+  afterEach(() => vi.restoreAllMocks());
+
+  /** A connected user whose budget is already used up on a marked site, with the nudge switch on. */
+  async function overBudget() {
+    const user = await connectedUser();
+    await http().put("/api/settings").set(user.auth).send({ dailyBudgetSeconds: 300 }).expect(200);
+    await http().put("/api/sites/youtube.com").set(user.auth).send({ marked: true }).expect(200);
+    await db.query(
+      `INSERT INTO tab_activity (user_id, client_event_id, url, domain, title, started_at, ended_at, duration)
+       VALUES ($1, gen_random_uuid(), 'https://youtube.com/', 'youtube.com', '', NOW() - interval '30 minutes', NOW() - interval '20 minutes', 600)`,
+      [user.id]
+    );
+    browser.local.data.nudgesEnabled = true; // the popup's switch
+    return user;
+  }
+  const withVisitId = (id) => vi.spyOn(globalThis.crypto, "randomUUID").mockReturnValue(id);
+  const until = async (done) => {
+    for (let i = 0; i < 50 && !done(); i++) await sleep(20);
+  };
+  const nudgeRows = async (user) => (await db.query("SELECT client_event_id, site, kind, shown FROM nudges WHERE user_id = $1", [user.id])).rows;
+  const range = async (user) => {
+    const date = new Date().toISOString().slice(0, 10);
+    return (await http().get(`/api/range?view=week&date=${date}&tz=UTC`).set(user.auth).expect(200)).body;
+  };
+
+  it("shows a notification and a badge, records the decision against the visit, and the dashboard counts the outcome", async () => {
+    const user = await overBudget();
+    withVisitId(shownId);
+    await browser.goTo(1, "https://www.youtube.com/watch?v=private123");
+    await until(() => browser.shown.length > 0);
+
+    expect(browser.shown).toHaveLength(1);
+    expect(browser.shown[0]).toMatchObject({ id: `dt-nudge-${shownId}`, title: "Over budget, and you just opened youtube.com" });
+    expect(browser.badge.text).toBe("!");
+    const asked = browser.calls.filter((c) => c.path === "/api/nudges");
+    expect(asked).toHaveLength(1);
+    expect(JSON.parse(asked[0].body)).toEqual({ site: "youtube.com", visit: shownId }); // the site and the visit, nothing else
+
+    await sleep(VISIT_MS);
+    await browser.goTo(2, "https://github.com/"); // leaves after a second: the visit uploads and the badge goes
+    expect(browser.badge.text).toBe("");
+    expect(browser.cleared).toContain(`dt-nudge-${shownId}`);
+
+    expect(await nudgeRows(user)).toMatchObject([{ client_event_id: shownId, site: "youtube.com", kind: "over-budget", shown: true }]);
+    expect((await visits(user.id)).map((v) => v.client_event_id)).toContain(shownId); // the same id: that is how the outcome is joined
+
+    expect((await range(user)).nudges).toMatchObject({ nudged: 1, shown: 1, shownLeft: 1, heldOut: 0, comparable: false });
+  });
+
+  it("decides but shows nothing when this visit is in the held-back group, and counts it on the other side", async () => {
+    const user = await overBudget();
+    withVisitId(heldId);
+    await browser.goTo(1, "https://www.youtube.com/");
+    await until(() => browser.calls.some((c) => c.path === "/api/nudges"));
+    await sleep(100);
+
+    expect(browser.shown).toEqual([]);
+    expect(browser.badge.text).toBe("");
+    expect(await nudgeRows(user)).toMatchObject([{ client_event_id: heldId, shown: false }]);
+
+    await sleep(VISIT_MS);
+    await browser.goTo(2, "https://github.com/");
+    expect((await range(user)).nudges).toMatchObject({ nudged: 0, shown: 0, heldOut: 1, heldOutLeft: 1 });
+  });
+
+  it("sends nothing while the switch is off, even over budget on a marked site", async () => {
+    const user = await overBudget();
+    delete browser.local.data.nudgesEnabled;
+    await browser.goTo(1, "https://youtube.com/");
+    await sleep(200);
+    expect(browser.calls.filter((c) => c.path === "/api/nudges")).toEqual([]);
+    expect(await nudgeRows(user)).toEqual([]);
+    expect(browser.shown).toEqual([]);
+  });
+
+  it("stays quiet on a site that is not marked", async () => {
+    const user = await overBudget();
+    withVisitId(shownId);
+    await browser.goTo(1, "https://github.com/");
+    await until(() => browser.calls.some((c) => c.path === "/api/nudges"));
+    expect(browser.shown).toEqual([]);
+    expect(await nudgeRows(user)).toEqual([]);
   });
 });

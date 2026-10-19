@@ -1,6 +1,8 @@
 import db from "../db.js";
 import { addDays, todayIn } from "../domain/dates.js";
+import { summarizeNudges } from "../domain/nudges.js";
 import { firstDistractionByDay, rangeWindows, summarizeRange } from "../domain/rangeSummary.js";
+import { nudgeRowsForDays } from "./nudgeModel.js";
 import { getDailyBudget } from "./settingsModel.js";
 import { dayEnd, dayStart } from "./timeSql.js";
 
@@ -143,16 +145,19 @@ export async function getRangeSummary(userId, view, date, tz, now = new Date()) 
   // Streaks are as of today whatever period is shown, so they need the last STREAK_DAYS days as well.
   const streakFrom = addDays(today, -(STREAK_DAYS - 1));
 
-  const [budgetSeconds, dailyRows, siteRows, heatRows, firstDistractions] = await Promise.all([
+  const [budgetSeconds, dailyRows, siteRows, heatRows, firstDistractions, nudgeRows] = await Promise.all([
     getDailyBudget(userId),
     fetchDailyRows(userId, { from: previous.start, to: through }, { from: streakFrom, to: today }, tz),
     fetchSites(userId, { start, end: through }, previous, tz),
     fetchHeat(userId, start, through, tz),
     fetchFirstDistractions(userId, start, through, tz),
+    nudgeRowsForDays(userId, start, through, tz),
   ]);
 
   return {
     timeZone: tz,
     ...summarizeRange({ view, date, today, budgetSeconds, streakFrom, dailyRows, siteRows, heatRows, firstDistractions }),
+    // Only present when nudges were decided in this period, so a user who never switched them on sees nothing new (D-48).
+    nudges: nudgeRows.length ? summarizeNudges(nudgeRows) : null,
   };
 }

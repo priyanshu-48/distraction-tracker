@@ -34,7 +34,7 @@ export async function exportData(req, res) {
         await write(res, batch.map((row) => visitCsvRow(exportVisit(row))).join(""));
       }
     } else {
-      const { email, createdAt, dailyBudgetSeconds, distractionSites, sessions, notifications } = await getAccountSnapshot(userId);
+      const { email, createdAt, dailyBudgetSeconds, distractionSites, sessions, notifications, nudges } = await getAccountSnapshot(userId);
       const head = JSON.stringify({
         exportedAt: now.toISOString(),
         account: { email, createdAt },
@@ -42,6 +42,7 @@ export async function exportData(req, res) {
         distractionSites,
         sessions,
         notifications,
+        nudges,
       });
       // reopen the object to append the visits array without holding it in memory
       await write(res, `${head.slice(0, -1)},"visits":[`);

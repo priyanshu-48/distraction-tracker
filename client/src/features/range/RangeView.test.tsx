@@ -55,6 +55,7 @@ const summary = (overrides: Partial<RangeSummary> = {}): RangeSummary => ({
     down: [{ domain: "reddit.com", seconds: 2000, previousSeconds: 2400, change: -400 }],
   },
   heatmap: heat([[0, 10, 900], [1, 11, 500], [2, 21, 3000], [2, 22, 1500]]),
+  nudges: null,
   ...overrides,
 });
 
@@ -436,5 +437,21 @@ describe("a month", () => {
     api.get.mockReturnValueOnce(new Promise(() => undefined));
     renderMonth();
     expect(screen.getByLabelText("Loading the month")).toBeTruthy();
+  });
+});
+
+describe("nudges card", () => {
+  it("shows how the nudges did when there were some", async () => {
+    api.get.mockResolvedValue({ data: summary({ nudges: { nudged: 4, shown: 4, shownLeft: 3, heldOut: 0, heldOutLeft: 0, unmatched: 0, comparable: false } }) });
+    renderRange();
+    expect(await screen.findByText("4 nudges")).toBeTruthy();
+    expect(screen.getByText("You left within a minute 3 of 4 times (75%).")).toBeTruthy();
+  });
+
+  it("is not on the page when there were none", async () => {
+    api.get.mockResolvedValue({ data: summary({ nudges: null }) });
+    renderRange();
+    await screen.findByText("Distraction time");
+    expect(screen.queryByText("Nudges")).toBeNull();
   });
 });
